@@ -1,0 +1,25 @@
+const {chromium,expect}=require('@playwright/test');
+const fs=require('node:fs');const path=require('node:path');
+(async()=>{
+  const runtime=JSON.parse(fs.readFileSync('data/runtime.json','utf8'));
+  const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream',`--use-file-for-fake-audio-capture=${path.resolve('data/voice-sample.wav')}%noloop`]});
+  const ctx=await browser.newContext({permissions:['microphone'],viewport:{width:1440,height:920}});
+  const page=await ctx.newPage();
+  await page.addInitScript(()=>localStorage.setItem('friday-prefs',JSON.stringify({wake:false})));
+  await page.goto(`http://127.0.0.1:${runtime.port}/#token=${runtime.token}`);
+  await expect.poll(()=>page.evaluate(()=>fetch('/api/health').then(r=>r.json()).then(h=>Object.values(h.services).every(s=>s==='ready'))),{timeout:120000}).toBe(true);
+  await page.getByRole('switch',{name:'Голосовые ответы',exact:true}).click();
+  await page.getByRole('button',{name:'Начать запись',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Закончить запись',exact:true})).toBeVisible();
+  await expect(page.locator('.message.user .message-text')).toContainText('умеешь',{timeout:45000});
+  await expect(page.locator('.message.assistant .message-text')).not.toBeEmpty({timeout:30000});
+  await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeEnabled({timeout:30000});
+  await page.getByRole('textbox',{name:'Сообщение Пятнице'}).fill('Напиши очень длинную историю про космос на пять страниц.');
+  await page.getByRole('button',{name:'Отправить',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Остановить',exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeEnabled();
+  await page.screenshot({path:'data/friday-conversation.png',fullPage:true});
+  console.log('MICROPHONE PASS: MediaRecorder, actual WAV input, VAD auto-stop, Whisper transcript, LLM response, Escape cancellation');
+  await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

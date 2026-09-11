@@ -1,0 +1,7 @@
+# Install CUDA PyTorch first from https://download.pytorch.org/whl/cu128
+torch==2.8.0
+torchaudio==2.8.0
+qwen-tts==0.1.1
+faster-qwen3-tts==0.2.6
+transformers==4.57.3
+soundfile

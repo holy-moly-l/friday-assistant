@@ -1,0 +1,14 @@
+fastapi==0.116.1
+uvicorn==0.35.0
+httpx==0.28.1
+python-multipart==0.0.22
+faster-whisper==1.2.1
+soundfile==0.13.1
+numpy>=2.0,<3
+psutil==7.0.0
+pytest==8.4.1
+pycaw==20251023
+Pillow==12.3.0
+vosk==0.3.45
+websockets==17.1
+uiautomation==2.0.29

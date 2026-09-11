@@ -1,0 +1,48 @@
+const {chromium,expect}=require('@playwright/test');const fs=require('node:fs');const path=require('node:path');const {spawn}=require('node:child_process');
+(async()=>{
+ const server=spawn(path.resolve('.venv/Scripts/python.exe'),['-u','tests/catalog_server.py'],{windowsHide:true,env:{...process.env,PYTHONUTF8:'1',FRIDAY_DESKTOP_PID:String(process.pid)}});
+ let logs='';server.stderr.on('data',b=>logs+=b.toString());
+ let browser;
+ try{
+   await expect.poll(async()=>{try{return (await fetch('http://127.0.0.1:17839/api/health')).ok}catch{return false}},{timeout:20000}).toBe(true);
+   const runtime=JSON.parse(fs.readFileSync('data/catalog-test-runtime.json','utf8'));
+   browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1440,height:960}});
+   await page.addInitScript(()=>localStorage.setItem('friday-prefs',JSON.stringify({wake:false})));
+   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+   await page.goto(`http://127.0.0.1:${runtime.port}/#token=${runtime.token}`);
+   await page.getByRole('switch',{name:'Голосовые ответы',exact:true}).click();
+   const catalogue=()=>page.getByRole('button',{name:'Команды',exact:true}).click();
+   await catalogue();await expect(page.locator('.catalog-card')).toHaveCount(90);
+   await page.screenshot({path:'data/catalog-expanded.png'});
+   await page.getByRole('group',{name:'Категория команд'}).getByRole('button',{name:'Папки',exact:true}).click();
+   await expect(page.locator('.catalog-card')).toHaveCount(8);
+   await page.getByRole('group',{name:'Категория команд'}).getByRole('button',{name:'Все',exact:true}).click();
+   await page.getByRole('textbox',{name:'Поиск команд'}).fill('калькулятора');
+   await expect(page.locator('.catalog-card')).toHaveCount(1);
+   const card=page.locator('.catalog-card');await card.getByRole('button',{name:/Формулировки/}).click();
+   await expect(page.getByRole('button',{name:'Перейди к калькулятору',exact:true})).toBeVisible();
+   await page.screenshot({path:'data/catalog-phrases.png'});
+   await page.getByRole('button',{name:'Перейди к калькулятору',exact:true}).click();
+   await expect(page.getByRole('textbox',{name:'Сообщение Пятнице'})).toHaveValue('Перейди к калькулятору');
+   await expect(page.locator('.message.user')).toHaveCount(0);
+   await catalogue();await page.getByRole('textbox',{name:'Поиск команд'}).fill('посчитать выражение');
+   await page.getByRole('button',{name:'Ввести команду',exact:true}).click();
+   const input=page.getByRole('textbox',{name:'Сообщение Пятнице'});await expect(input).toHaveValue('Посчитай ');
+   await input.fill('Пятница, вычисли двадцать пять умножить на четыре');
+   await page.getByRole('button',{name:'Отправить',exact:true}).click();
+   await expect(page.locator('.message.assistant .message-text').last()).toContainText('Результат: 100');
+   await input.fill('Пятница, запомни: Купить Чай и прочитать Отчёт.');
+   await page.getByRole('button',{name:'Отправить',exact:true}).click();
+   await expect(page.locator('.message.assistant .message-text').last()).toContainText('Заметка сохранена: Купить Чай и прочитать Отчёт.');
+   await input.fill('Прочитай мои заметки');
+   await page.getByRole('button',{name:'Отправить',exact:true}).click();
+   await expect(page.locator('.message.assistant .message-text').last()).toContainText('Купить Чай и прочитать Отчёт.');
+   await catalogue();await page.setViewportSize({width:1050,height:720});
+   await page.screenshot({path:'data/catalog-compact.png'});
+   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Horizontal overflow');
+   await page.getByRole('textbox',{name:'Поиск команд'}).fill('несуществующаякоманда');
+   await expect(page.getByRole('heading',{name:'Команда не найдена'})).toBeVisible();
+   if(errors.length)throw new Error(errors.join('\n'));
+   console.log('CATALOG UI PASS: 90 cards, categories, inflected search, phrase insertion without execution, real arithmetic/note endpoints, temporary history, compact layout');
+ }catch(error){console.error(logs);throw error;}finally{await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1});
