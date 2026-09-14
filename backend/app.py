@@ -23,7 +23,8 @@ from pc import CommandError, normalize, open_app, resolve_pc_command, run_pc
 from expressive_voice import ExpressiveVoice, VoiceCancelled, PREVIEW_TEXT
 from lifecycle import follow_parent
 from wake_word import WakeService
-from desktop_agent import DesktopAgent, deterministic
+from desktop_agent import DesktopAgent, deterministic, vision_request, stop_request
+from desktop_trace import trace
 from recognition import MODEL_FOLDER as STT_FOLDER, MODEL_LABEL as STT_LABEL, transcribe as recognize_russian
 follow_parent(os.environ.get('FRIDAY_DESKTOP_PID'))
 
@@ -181,7 +182,7 @@ async def local_only(request: Request, call_next):
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.6.1', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.6.2', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')
@@ -294,13 +295,16 @@ async def chat(body: ChatBody, request: Request):
     text = body.text.strip()
     if not text:
         raise HTTPException(422, 'Введите сообщение')
+    if stop_request(text):
+        desktop.stop()
+        return StreamingResponse(iter([json.dumps({'type':'delta','text':'Остановлено.'},ensure_ascii=False)+'\n']),media_type='application/x-ndjson')
     if chat_lock.locked():
         raise HTTPException(409, 'Дождитесь текущего ответа')
     with connect() as db:
         if not db.execute('SELECT id FROM sessions WHERE id=?', (body.session_id,)).fetchone():
             raise HTTPException(404, 'Разговор не найден')
-    command = resolve_command(text)
-    if not command and deterministic(text) is None and state['llm'] != 'ready':
+    command = None if vision_request(text) else resolve_command(text)
+    if not command and deterministic(text) is None and state['llm'] != 'ready' and not (vision_request(text) and not desktop.vision):
         raise HTTPException(503, 'Модель ещё загружается. Подождите немного или проверьте настройки.')
     await chat_lock.acquire()
     try:
@@ -464,7 +468,10 @@ def recognize_audio(audio):
                     client.post(OLLAMA+'/api/generate',json={'model':desktop.model,'keep_alive':0})
             except httpx.HTTPError:pass
             whisper_model.model.load_model()
-        try:return recognize_russian(whisper_model,audio)
+        try:
+            result=recognize_russian(whisper_model,audio)
+            trace('VOICE',result.get('text',''),uncertain=result.get('uncertain',False))
+            return result
         finally:
             if stt_device=='cuda':whisper_model.model.unload_model(to_cpu=True)
 

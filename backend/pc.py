@@ -1,6 +1,7 @@
 """Explicit desktop actions. No generated code, command shells, or eval."""
 from __future__ import annotations
 import ctypes
+import json
 from datetime import datetime
 from functools import lru_cache
 import os
@@ -11,10 +12,31 @@ import subprocess
 import time
 from urllib.parse import quote, urlsplit
 import webbrowser
+from desktop_trace import trace
 
 
 class CommandError(Exception):
     pass
+
+
+class AppNotFound(CommandError):
+    pass
+
+
+APP_ALIASES = {
+ 'calculator': ('калькулятор','calculator','calc'), 'notepad':('блокнот','notepad'),
+ 'explorer':('проводник','explorer'), 'telegram':('телеграм','телега','telegram','telegram desktop'),
+ 'discord':('дискорд','discord'), 'paint':('paint','паинт'), 'chrome':('google chrome','chrome','хром'),
+ 'edge':('microsoft edge','edge','msedge'), 'firefox':('firefox','файрфокс'), 'steam':('steam','стим'),
+ 'vscode':('visual studio code','vscode','code'), 'taskmgr':('диспетчер задач','taskmgr'),
+ 'browser':('браузер','browser'), 'settings':('параметры','settings','systemsettings'),
+ 'yandex':('яндекс','yandex'),
+}
+
+
+def canonical_app(name):
+    name = normalize(name.strip())
+    return next((key for key, aliases in APP_ALIASES.items() if name == key or name in aliases), name)
 
 
 from command_language import CATALOG, normalize, resolve as resolve_language
@@ -55,20 +77,21 @@ def installed_shortcuts():
 
 
 def app_path(app):
+    app = canonical_app(app)
     win = windows_dir()
     direct = {'calculator': win/'System32/calc.exe', 'notepad':win/'System32/notepad.exe',
               'explorer':win/'explorer.exe', 'paint':win/'System32/mspaint.exe', 'taskmgr':win/'System32/Taskmgr.exe',
               'control':win/'System32/control.exe', 'snipping':win/'System32/SnippingTool.exe'}
-    if app in direct:
+    if app in direct and direct[app].is_file():
         return direct[app]
     executables = {'chrome':'chrome.exe','edge':'msedge.exe','firefox':'firefox.exe','yandex':'browser.exe',
                    'telegram':'Telegram.exe','discord':'Discord.exe','steam':'steam.exe','vscode':'Code.exe'}
-    if app in executables and os.name == 'nt':
+    if os.name == 'nt':
         import winreg
         for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
             for view in (winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY):
                 try:
-                    with winreg.OpenKey(hive, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\'+executables[app],0,winreg.KEY_READ|view) as key:
+                    with winreg.OpenKey(hive, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\'+executables.get(app,app+'.exe'),0,winreg.KEY_READ|view) as key:
                         p=Path(winreg.QueryValueEx(key,None)[0].strip('"'))
                         if p.is_file(): return p
                 except OSError: pass
@@ -83,6 +106,7 @@ def app_path(app):
                   'steam':[program86/'Steam/steam.exe'],
                   'vscode':[local/'Programs/Microsoft VS Code/Code.exe',program/'Microsoft VS Code/Code.exe'],
                   'firefox':[program/'Mozilla Firefox/firefox.exe']}
+    candidates['discord'] = sorted((local/'Discord').glob('app-*/Discord.exe'), key=lambda p:p.stat().st_mtime, reverse=True)
     for p in candidates.get(app,[]):
         if p.is_file(): return p
     aliases = {'telegram':'telegram','vscode':'visual studio code','chrome':'google chrome','edge':'microsoft edge','yandex':'yandex','discord':'discord','steam':'steam'}
@@ -92,19 +116,74 @@ def app_path(app):
     matches = [Path(value) for key,value in shortcuts.items() if key.startswith(name+' ') or key.endswith(' '+name)]
     if len(matches)==1: return matches[0]
     if len(matches)>1: raise CommandError('Найдено несколько приложений. Уточните название: '+', '.join(p.stem for p in matches[:5]))
-    raise CommandError(f'Не нашла установленное приложение «{app}». Можно открыть браузер, проводник, калькулятор, блокнот или назвать программу из меню «Пуск».')
+    raise AppNotFound(f'Не нашла установленное приложение «{app}» среди установленных программ.')
 
 
-def open_app(app):
+def installed_shell_apps(cancel=None):
+    """Fixed read-only Windows command; user/model text is never PowerShell code."""
+    ps = windows_dir()/'System32/WindowsPowerShell/v1.0/powershell.exe'
+    script = "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); @(Get-StartApps | Select-Object Name,AppID) | ConvertTo-Json -Compress"
+    process=None
+    try:
+        process = subprocess.Popen([str(ps), '-NoProfile', '-NonInteractive', '-Command', script],
+            stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=subprocess.CREATE_NO_WINDOW)
+        end=time.monotonic()+12
+        while True:
+            if cancel is not None and cancel.is_set():raise CommandError('Остановлено во время поиска приложения.')
+            try:out,_=process.communicate(timeout=.1);break
+            except subprocess.TimeoutExpired:
+                if time.monotonic()>end:raise CommandError('Меню «Пуск» не ответило за 12 секунд.')
+        if process.returncode:raise CommandError('Не удалось прочитать приложения меню «Пуск».')
+        rows = json.loads(out.decode('utf-8-sig'))
+        return rows if isinstance(rows,list) else [rows]
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        raise CommandError('Не удалось прочитать приложения меню «Пуск». Повторите запрос.') from exc
+    finally:
+        if process is not None:
+            if process.poll() is None:process.kill()
+            process.communicate()
+
+
+def resolve_application(app,cancel=None):
+    app = canonical_app(app)
+    if not app or len(app)>80 or re.search(r'[\\/:\n\r;|&`$<>]',app):
+        raise CommandError('Укажите название установленной программы, без пути и аргументов.')
+    try:
+        path = app_path(app)
+        result = dict(kind='shortcut' if path.suffix.lower()=='.lnk' else 'exe', value=str(path), name=app)
+    except AppNotFound:
+        aliases = (app, *APP_ALIASES.get(app,()))
+        entries = installed_shell_apps(cancel) if cancel is not None else installed_shell_apps()
+        matches = [r for r in entries if canonical_app(r['Name'])==app or normalize(r['Name']) in aliases]
+        if not matches:
+            matches = [r for r in entries if any(normalize(r['Name']).startswith(a+' ') or normalize(r['Name']).endswith(' '+a) for a in aliases)]
+        unique = {r['AppID']:r for r in matches if r.get('AppID')}
+        if len(unique)>1: raise CommandError('Найдено несколько приложений: '+', '.join(r['Name'] for r in unique.values()))
+        if not unique: raise AppNotFound(f'Не нашла установленное приложение «{app}» среди программ и меню «Пуск».')
+        entry = next(iter(unique.values()))
+        result = dict(kind='shell', value=entry['AppID'], name=entry['Name'])
+    trace('RESOLVER','found',**result)
+    return result
+
+
+def open_app(app, cancel=None):
+    app = canonical_app(app)
     uris = {'settings':'ms-settings:', 'sound_settings':'ms-settings:sound', 'mic_settings':'ms-settings:privacy-microphone'}
     if app in uris:
         os.startfile(uris[app]); return 'Параметры Windows'
     if app=='browser':
         if not webbrowser.open('about:blank',new=2):raise CommandError('Не удалось открыть браузер по умолчанию.')
         return 'Браузер'
-    p=app_path(app)
-    if p.suffix.lower()=='.lnk':os.startfile(str(p))
-    else:launch_executable(p)
+    resolved = resolve_application(app,cancel)
+    if cancel is not None and cancel.is_set():
+        raise CommandError('Остановлено до запуска программы.')
+    try:
+        if resolved['kind']=='shell':os.startfile('shell:AppsFolder\\'+resolved['value'])
+        elif resolved['kind']=='shortcut':os.startfile(resolved['value'])
+        else:launch_executable(resolved['value'])
+    except OSError as exc:
+        raise CommandError(f'Нашла «{app}», но Windows не смогла запустить приложение (код {getattr(exc,"winerror",None) or exc.errno}).') from exc
+    trace('LAUNCH','process start requested',app=app,method=resolved['kind'])
     labels={'calculator':'калькулятор','notepad':'блокнот','explorer':'проводник','taskmgr':'диспетчер задач'}
     return labels.get(app,app)
 

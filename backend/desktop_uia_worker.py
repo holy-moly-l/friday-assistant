@@ -21,6 +21,9 @@ def inspect(hwnd):
             key=hashlib.sha256(str(list(control.GetRuntimeId())).encode()).hexdigest()[:16]
             row=dict(id=key,name=control.Name[:240],type=control.ControlTypeName,
                      enabled=control.IsEnabled,focused=control.HasKeyboardFocus)
+            if row['type'] in ('ButtonControl','MenuItemControl','HyperlinkControl','CheckBoxControl','RadioButtonControl','TabItemControl','ListItemControl'):
+                row['clickable']=any(control.GetPattern(pattern) is not None for pattern in
+                    (auto.PatternId.InvokePattern,auto.PatternId.SelectionItemPattern,auto.PatternId.TogglePattern))
             value=control.GetPattern(auto.PatternId.ValuePattern)
             if value:row['value']=value.Value[:1000]
             toggle=control.GetPattern(auto.PatternId.TogglePattern)

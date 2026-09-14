@@ -26,14 +26,14 @@ def proc(hwnd,msg,wp,lp):
     return u.DefWindowProcW(hwnd,msg,wp,lp)
 instance=k.GetModuleHandleW(None);wc=WNDCLASS();wc.lpfnWndProc=proc;wc.hInstance=instance;wc.hbrBackground=6;wc.lpszClassName='FridaySafeFixture'
 u.RegisterClassW(c.byref(wc))
-hwnd=u.CreateWindowExW(0,wc.lpszClassName,'Friday Desktop Fixture',0x10CF0000,100,100,650,420,None,None,instance,None)
+hwnd=u.CreateWindowExW(0,wc.lpszClassName,os.environ.get('FRIDAY_FIXTURE_TITLE','Friday Desktop Fixture'),0x10CF0000,100,100,650,420,None,None,instance,None)
 def child(typ,name,x,y,width,height,id,extra=0):
     return u.CreateWindowExW(0,typ,name,0x50010000|extra,x,y,width,height,hwnd,id,instance,None)
 child('STATIC','Тестовое окно Пятницы. Никаких реальных отправок.',20,20,590,40,100)
 child('BUTTON','Продолжить',20,80,180,40,101)
 child('BUTTON','Отправить',220,80,180,40,102)
 edit=child('EDIT','',20,150,570,40,103,0x00800000)
-status=child('STATIC','Ошибка 810: тестовый документ не найден',20,220,590,50,104)
+status=child('STATIC',os.environ.get('FRIDAY_FIXTURE_STATUS','Ошибка 810: тестовый документ не найден'),20,220,590,50,104)
 u.SetFocus(edit)
 Path(sys.argv[1]).write_text(json.dumps({'hwnd':hwnd,'pid':os.getpid()}),encoding='utf-8')
 msg=w.MSG()

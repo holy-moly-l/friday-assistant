@@ -51,6 +51,23 @@ def test_validation(client):
     assert client.post('/api/chat', json={'session_id':'missing','text':'Привет'}).status_code == 404
     assert client.post('/api/chat', json={'session_id':'missing','text':' '}).status_code == 422
 
+
+def test_stop_bypasses_busy_chat_and_model_readiness(client,monkeypatch):
+    stop=__import__('unittest.mock',fromlist=['Mock']).Mock()
+    monkeypatch.setattr(friday.desktop,'stop',stop)
+    monkeypatch.setattr(friday.chat_lock,'locked',lambda:True)
+    response=client.post('/api/chat',json={'session_id':'stop-only','text':'Пятница, стоп'})
+    assert response.status_code==200 and 'Остановлено' in response.text
+    stop.assert_called_once()
+
+
+def test_disabled_vision_explains_setting_even_when_model_offline(client,monkeypatch):
+    monkeypatch.setattr(friday.desktop,'vision',False)
+    monkeypatch.setitem(friday.state,'llm','error')
+    sid=client.post('/api/sessions').json()['id']
+    response=client.post('/api/chat',json={'session_id':sid,'text':'Что ты видишь?'})
+    assert response.status_code==200 and 'Снимки экрана отключены' in response.text
+
 def test_speech_guards(client, monkeypatch):
     monkeypatch.setitem(friday.state, 'tts', 'ready')
     assert client.post('/api/speech', json={'text':'привет','speaker':'unknown'}).status_code == 422

@@ -6,9 +6,11 @@ import sys
 import time
 from desktop_native import check
 from pc import CommandError
+from desktop_trace import trace
 
 def call(window,op,cancel,**args):
     check(cancel)
+    trace('UIA',op,hwnd=window['hwnd'])
     process=subprocess.Popen([sys.executable,str(Path(__file__).with_name('desktop_uia_worker.py'))],
         stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=subprocess.CREATE_NO_WINDOW,
         env={**os.environ,'FRIDAY_UIA_PARENT_PID':str(os.getpid())})

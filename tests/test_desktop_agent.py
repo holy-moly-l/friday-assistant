@@ -84,21 +84,27 @@ def test_app_identity_not_browser_tab_title():
     assert not d.native.matches({'title':'Telegram — Google Chrome','process':'chrome.exe'},'telegram')
     assert d.native.matches({'title':'Telegram','process':'Telegram.exe'},'telegram')
 
-def test_launch_does_not_claim_an_unrelated_existing_window(monkeypatch):
+def test_launch_selects_an_existing_app_window_without_duplicate_launch(monkeypatch):
     old=[{'hwnd':1,'title':'Калькулятор','process':'CalculatorApp.exe'}, {'hwnd':2,'title':'Калькулятор','process':'CalculatorApp.exe'}]
     monkeypatch.setattr(d.native,'windows',lambda:old)
-    monkeypatch.setattr(d.native,'open_app',lambda name:None)
+    monkeypatch.setattr(d.native,'open_app',lambda *a,**kw:pytest.fail('App already has windows'))
+    monkeypatch.setattr(d.native,'same',lambda win:win)
+    monkeypatch.setattr(d.native,'try_focus',lambda *a:False)
     monkeypatch.setattr(d.native,'wait_for',lambda predicate,*args:predicate())
     monkeypatch.setattr(d.native.u,'GetForegroundWindow',lambda:999)
-    with pytest.raises(CommandError,match='не появилось'):d.native.launch('calculator',threading.Event())
+    result=d.native.launch('calculator',threading.Event())
+    assert result['hwnd']==1 and result['launch_status']=='already_running' and result['focused'] is False
 
-def test_launch_remembers_new_window_when_several_already_exist(monkeypatch):
-    old=[{'hwnd':1,'title':'Калькулятор','process':'CalculatorApp.exe'}, {'hwnd':2,'title':'Калькулятор','process':'CalculatorApp.exe'}]
+def test_launch_remembers_new_window_without_matching_browser_tab(monkeypatch):
+    old=[{'hwnd':1,'title':'Калькулятор — Chrome','process':'chrome.exe'}]
     new={'hwnd':3,'title':'Калькулятор','process':'CalculatorApp.exe'};started=[]
     monkeypatch.setattr(d.native,'windows',lambda:old+([new] if started else []))
-    monkeypatch.setattr(d.native,'open_app',lambda name:started.append(True))
+    monkeypatch.setattr(d.native,'open_app',lambda name,**kw:started.append(True))
+    monkeypatch.setattr(d.native,'same',lambda win:win)
+    monkeypatch.setattr(d.native,'try_focus',lambda *a:True)
     monkeypatch.setattr(d.native,'wait_for',lambda predicate,*args:predicate())
-    assert d.native.launch('calculator',threading.Event())==new
+    result=d.native.launch('calculator',threading.Event())
+    assert result['hwnd']==new['hwnd'] and result['launch_status']=='started'
 
 def test_model_request_cancellation_is_prompt(tmp_path):
     agent=d.DesktopAgent(tmp_path)
