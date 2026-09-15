@@ -68,6 +68,12 @@ def test_disabled_vision_explains_setting_even_when_model_offline(client,monkeyp
     response=client.post('/api/chat',json={'session_id':sid,'text':'Что ты видишь?'})
     assert response.status_code==200 and 'Снимки экрана отключены' in response.text
 
+
+def test_system_reports_selected_model(client,monkeypatch):
+    monkeypatch.setattr(friday.desktop,'model','qwen3.5:2b')
+    assert client.get('/api/health').json()['model']=='qwen3.5:2b'
+    assert client.get('/api/system').json()['model']=='qwen3.5:2b'
+
 def test_speech_guards(client, monkeypatch):
     monkeypatch.setitem(friday.state, 'tts', 'ready')
     assert client.post('/api/speech', json={'text':'привет','speaker':'unknown'}).status_code == 422

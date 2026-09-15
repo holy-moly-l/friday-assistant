@@ -21,9 +21,11 @@ def inspect(hwnd):
             key=hashlib.sha256(str(list(control.GetRuntimeId())).encode()).hexdigest()[:16]
             row=dict(id=key,name=control.Name[:240],type=control.ControlTypeName,
                      enabled=control.IsEnabled,focused=control.HasKeyboardFocus)
-            if row['type'] in ('ButtonControl','MenuItemControl','HyperlinkControl','CheckBoxControl','RadioButtonControl','TabItemControl','ListItemControl'):
+            if row['type'] in ('ButtonControl','MenuItemControl','HyperlinkControl','CheckBoxControl','RadioButtonControl','TabItemControl','ListItemControl','ComboBoxControl'):
                 row['clickable']=any(control.GetPattern(pattern) is not None for pattern in
-                    (auto.PatternId.InvokePattern,auto.PatternId.SelectionItemPattern,auto.PatternId.TogglePattern))
+                    (auto.PatternId.InvokePattern,auto.PatternId.SelectionItemPattern,auto.PatternId.TogglePattern,auto.PatternId.ExpandCollapsePattern))
+            expand=control.GetPattern(auto.PatternId.ExpandCollapsePattern)
+            if expand:row['expanded']=expand.ExpandCollapseState
             value=control.GetPattern(auto.PatternId.ValuePattern)
             if value:row['value']=value.Value[:1000]
             toggle=control.GetPattern(auto.PatternId.TogglePattern)
@@ -62,9 +64,20 @@ def main(data):
     if not selected or not selected['enabled']:raise ValueError('Элемент исчез, изменился или недоступен. Повторите запрос.')
     control=controls[selected['id']]
     if data['op']=='click':
-        pattern=control.GetPattern(auto.PatternId.InvokePattern)
+        selection=control.GetPattern(auto.PatternId.SelectionItemPattern)
+        expand=control.GetPattern(auto.PatternId.ExpandCollapsePattern)
+        if expand and expand.ExpandCollapseState==3:expand=None
+        if selected['type'] in ('TabItemControl','ListItemControl') and selection:
+            if selection.IsSelected:return {'verified':True,'elements':rows}
+            selection.Select(waitTime=0)
+            pattern=None
+        elif expand:
+            if expand.ExpandCollapseState==0:expand.Expand(waitTime=0)
+            else:expand.Collapse(waitTime=0)
+            pattern=None
+        else:pattern=control.GetPattern(auto.PatternId.InvokePattern)
         if pattern:pattern.Invoke(waitTime=0)
-        else:
+        elif not (selection and selected['type'] in ('TabItemControl','ListItemControl') or expand):
             pattern=control.GetPattern(auto.PatternId.SelectionItemPattern)
             if pattern:pattern.Select(waitTime=0)
             else:

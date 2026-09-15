@@ -3,7 +3,7 @@ const {chromium,expect}=require('@playwright/test');const fs=require('node:fs');
   const runtime=JSON.parse(fs.readFileSync('data/runtime.json','utf8'));
   const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream',`--use-file-for-fake-audio-capture=${path.resolve('data/voice-sample.wav')}`]});
   const ctx=await browser.newContext({permissions:['microphone'],viewport:{width:1440,height:960}});const page=await ctx.newPage();
-  await page.addInitScript(()=>localStorage.setItem('friday-prefs',JSON.stringify({wake:false})));
+  await page.addInitScript(()=>{if(!localStorage.getItem('friday-prefs'))localStorage.setItem('friday-prefs',JSON.stringify({wake:false}));});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${runtime.port}/#token=${runtime.token}`);
   await page.getByRole('button',{name:'Настройки',exact:true}).click();

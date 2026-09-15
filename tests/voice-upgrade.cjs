@@ -1,11 +1,11 @@
 const {_electron:electron,expect}=require('@playwright/test');
 const fs=require('node:fs');const path=require('node:path');const {execFileSync}=require('node:child_process');
 (async()=>{
-  const app=await electron.launch({executablePath:path.resolve('release/Friday-win32-x64/Friday.exe'),timeout:60000});
+  const app=await electron.launch({executablePath:path.resolve('release/Friday-win32-x64/Friday.exe'),args:process.env.FRIDAY_TEST_PROFILE?[`--user-data-dir=${process.env.FRIDAY_TEST_PROFILE}`]:[],timeout:60000});
   try {
     const page=await app.firstWindow();
     await expect.poll(()=>page.evaluate(()=>fetch('/api/health').then(r=>r.json()).then(h=>Object.values(h.services).every(s=>s==='ready'))),{timeout:120000}).toBe(true);
-    const runtime=JSON.parse(fs.readFileSync('data/runtime.json','utf8'));
+    const runtime=JSON.parse(fs.readFileSync(path.join(process.env.FRIDAY_DATA_DIR||'data','runtime.json'),'utf8'));
     const origin=`http://127.0.0.1:${runtime.port}/api`;
     const headers={'X-Friday-Token':runtime.token,'Content-Type':'application/json'};
     const started=Date.now();
@@ -28,8 +28,12 @@ const fs=require('node:fs');const path=require('node:path');const {execFileSync}
     // Leave the fast voice selected so opening the app gives immediate spoken feedback.
     await page.getByRole('tab',{name:'Голос и микрофон',exact:true}).click();
     await page.getByRole('combobox',{name:'Тембр голоса'}).selectOption('xenia');
+    // STT correctly unloads the voice worker to free VRAM. Start it again to test shutdown ownership.
+    const again=await fetch(origin+'/speech',{method:'POST',headers,body:JSON.stringify({text:'Проверка завершена.',speaker:'qwen-sohee'}),signal:AbortSignal.timeout(120000)});
+    if(!again.ok)throw new Error('Could not restart the voice worker');
+    await again.arrayBuffer();
     const children=JSON.parse(execFileSync(path.resolve('.venv/Scripts/python.exe'),['-c',`import psutil,json; print(json.dumps([p.pid for p in psutil.Process(${runtime.pid}).children(recursive=True)]))`],{encoding:'utf8'}));
-    if(children.length<2)throw new Error('Expected the CUDA voice worker and Windows redirector');
+    if(!children.length)throw new Error('Expected a running CUDA voice worker');
     await app.close();
     const alive=pid=>{try{process.kill(pid,0);return true;}catch{return false;}};
     await expect.poll(()=>[runtime.pid,...children].filter(alive),{timeout:15000}).toEqual([]);

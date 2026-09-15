@@ -162,7 +162,7 @@ def resolve_application(app,cancel=None):
         if not unique: raise AppNotFound(f'Не нашла установленное приложение «{app}» среди программ и меню «Пуск».')
         entry = next(iter(unique.values()))
         result = dict(kind='shell', value=entry['AppID'], name=entry['Name'])
-    trace('RESOLVER','found',**result)
+    trace('RESOLVER',status='success',kind=result['kind'])
     return result
 
 
@@ -183,7 +183,7 @@ def open_app(app, cancel=None):
         else:launch_executable(resolved['value'])
     except OSError as exc:
         raise CommandError(f'Нашла «{app}», но Windows не смогла запустить приложение (код {getattr(exc,"winerror",None) or exc.errno}).') from exc
-    trace('LAUNCH','process start requested',app=app,method=resolved['kind'])
+    trace('LAUNCH',status='requested',kind=resolved['kind'])
     labels={'calculator':'калькулятор','notepad':'блокнот','explorer':'проводник','taskmgr':'диспетчер задач'}
     return labels.get(app,app)
 

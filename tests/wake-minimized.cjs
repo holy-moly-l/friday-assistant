@@ -7,7 +7,7 @@ const {_electron:electron,expect}=require('@playwright/test');const fs=require('
  try{
   await expect.poll(async()=>{try{return(await fetch('http://127.0.0.1:17835/api/health')).ok}catch{return false}},{timeout:45000}).toBe(true);
   const protocol=await promisify(execFile)(path.resolve('.venv/Scripts/python.exe'),['tests/wake_protocol.py'],{env:{...process.env,PYTHONUTF8:'1'},windowsHide:true});console.log(protocol.stdout);
-  app=await electron.launch({executablePath:path.resolve('release/Friday-win32-x64/Friday.exe'),args:['--use-fake-device-for-media-stream',`--use-file-for-fake-audio-capture=${path.resolve('data/wake-minimized.wav')}%noloop`],timeout:60000});
+  app=await electron.launch({executablePath:path.resolve('release/Friday-win32-x64/Friday.exe'),args:[...(process.env.FRIDAY_TEST_PROFILE?[`--user-data-dir=${process.env.FRIDAY_TEST_PROFILE}`]:[]),'--use-fake-device-for-media-stream',`--use-file-for-fake-audio-capture=${path.resolve('data/wake-minimized.wav')}%noloop`],timeout:60000});
   page=await app.firstWindow();
   // firstWindow can resolve before main's loadURL; reloading then aborts startup.
   await page.waitForLoadState('domcontentloaded');

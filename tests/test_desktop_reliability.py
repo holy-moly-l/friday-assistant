@@ -173,6 +173,8 @@ def test_uia_then_real_coordinate_executor(available,allow,tmp_path,monkeypatch)
         assert name=='Продолжить' and image=='before';calls.append('locate')
         return d.ImagePoint(found=True,x=.25,y=.4,label=name,explanation='visible')
     agent.locate=locate
+    async def refresh(window,name,before,anchor):calls.append('refresh');return before,WINDOW['rect'],anchor
+    agent.refresh_target=refresh
     def click(*args):
         assert args[1:3]==(.25,.4);calls.append('coordinate_click')
     monkeypatch.setattr(n,'point_click',click)
@@ -181,7 +183,7 @@ def test_uia_then_real_coordinate_executor(available,allow,tmp_path,monkeypatch)
     events=asyncio.run(collect(agent,'Нажми кнопку Продолжить',allow))
     assert any(e['type']=='approval' for e in events)
     if available:assert calls==(['uia_click'] if allow else [])
-    else:assert calls==(['capture','locate','coordinate_click','capture','verify'] if allow else ['capture','locate'])
+    else:assert calls==(['capture','locate','refresh','coordinate_click','capture','verify'] if allow else ['capture','locate'])
     assert any(e.get('status')=='done' for e in events)==allow
 
 

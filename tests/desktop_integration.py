@@ -28,7 +28,7 @@ async def main():
             for mode in ('maximize','minimize','restore'):
                 print('WINDOW',mode,n.same(win),flush=True)
                 await asyncio.to_thread(n.window_action,win,mode,1,cancel)
-            await asyncio.to_thread(n.window_action,win,'move',len(screens),cancel)
+            await asyncio.to_thread(n.window_action,win,'move',screens[-1]['index'],cancel)
             agent=DesktopAgent(folder);agent.context['test']=win
             agent.foreground.last=win
             async def run(text,approve=True):

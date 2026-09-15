@@ -5,7 +5,7 @@ const path = require('node:path');
   const runtime=JSON.parse(fs.readFileSync('data/runtime.json','utf8'));
   const browser=await chromium.launch({channel:'msedge',headless:true});
   const page=await browser.newPage({viewport:{width:1440,height:920},deviceScaleFactor:1});
-  await page.addInitScript(()=>localStorage.setItem('friday-prefs',JSON.stringify({wake:false})));
+  await page.addInitScript(()=>{if(!localStorage.getItem('friday-prefs'))localStorage.setItem('friday-prefs',JSON.stringify({wake:false}));});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${runtime.port}/#token=${runtime.token}`);
   await expect(page.getByRole('heading',{name:'Чем могу помочь?'})).toBeVisible();

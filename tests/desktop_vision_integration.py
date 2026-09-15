@@ -1,5 +1,7 @@
 """Real captures + local Qwen + confirmed coordinate click in our disposable window only."""
 import asyncio
+import ctypes
+from ctypes import wintypes
 import json
 import os
 from pathlib import Path
@@ -14,6 +16,7 @@ import desktop_native as n
 import desktop_uia as uia
 from desktop_agent import DesktopAgent
 from pc import CommandError
+from native_test_support import activate_fixture
 
 
 async def main():
@@ -23,7 +26,7 @@ async def main():
             file=Path(folder)/(name+'.json')
             p=subprocess.Popen([sys.executable,str(ROOT/'tests/desktop_fixture.py'),str(file)],
                 creationflags=subprocess.CREATE_NO_WINDOW,env={**os.environ,'FRIDAY_TEST_PARENT_PID':str(os.getpid()),
-                'FRIDAY_FIXTURE_TITLE':name,'FRIDAY_FIXTURE_STATUS':status})
+                'FRIDAY_FIXTURE_TITLE':name,'FRIDAY_FIXTURE_STATUS':status,'FRIDAY_FIXTURE_ANIMATION':'1'})
             processes.append(p)
             for _ in range(100):
                 if file.exists():return n.info(json.loads(file.read_text())['hwnd'])
@@ -39,8 +42,8 @@ async def main():
                 all_shot=await asyncio.to_thread(n.capture_all_screens,cancel)
                 screens=n.monitors()
                 assert all_shot['original_size'][0]==max(s['bounds'][2] for s in screens)-min(s['bounds'][0] for s in screens)
-                second=await asyncio.to_thread(n.capture_screen,cancel,len(n.monitors()))
-                assert second['target']['monitor']==len(n.monitors())
+                second=await asyncio.to_thread(n.capture_screen,cancel,screens[-1]['index'])
+                assert second['target']['monitor']==screens[-1]['index']
             print('CAPTURE_OK: window behind another window, focus forbidden, monitor and all_screens',flush=True)
             # The standalone script must describe the first window, not the covering one.
             proc=await asyncio.create_subprocess_exec(sys.executable,str(ROOT/'scripts/test_vision.py'),
@@ -57,6 +60,10 @@ async def main():
                     events.append(event)
                     if event['type']=='approval':
                         assert approve and event['window']=='Friday Vision Fixture'
+                        activate_fixture(win)
+                        n.u.GetDlgItem.argtypes=[wintypes.HWND,ctypes.c_int];n.u.GetDlgItem.restype=wintypes.HWND
+                        button=n.u.GetDlgItem(win['hwnd'],101)
+                        assert n.u.SetWindowPos(button,None,35,80,180,40,0x14)
                         print('CONFIRM_OWN_FIXTURE',event.get('x'),event.get('y'),flush=True)
                         agent.approve(event['nonce'],True)
                 print('COMMAND',text,'RESULT',events[-1].get('text'),flush=True)

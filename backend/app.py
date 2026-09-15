@@ -38,14 +38,13 @@ from pydantic import BaseModel, Field
 import soundfile as sf
 
 ROOT = Path(os.environ.get('FRIDAY_ROOT', Path(__file__).resolve().parents[1]))
-DATA = ROOT / 'data'
+DATA = Path(os.environ.get('FRIDAY_DATA_DIR', ROOT / 'data'))
 DATA.mkdir(exist_ok=True)
 MODELS = ROOT / 'models'
 DB = DATA / 'friday.db'
 TOKEN = os.environ.get('FRIDAY_TOKEN') or secrets.token_urlsafe(32)
 PORT = int(os.environ.get('FRIDAY_PORT', '17835'))
 OLLAMA = 'http://127.0.0.1:11434'
-MODEL = 'qwen3.5:4b'
 state = {'llm': 'loading', 'stt': 'loading', 'tts': 'loading', 'errors': {}}
 dll_handles = []
 stt_device = 'cpu'
@@ -182,7 +181,7 @@ async def local_only(request: Request, call_next):
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.6.2', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.6.3', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')
@@ -198,7 +197,7 @@ def retry_models():
 @app.get('/api/system')
 def system():
     memory = psutil.virtual_memory()
-    return {'cpu': psutil.cpu_percent(), 'ram_used': round(memory.used / 1024**3, 1), 'ram_total': round(memory.total / 1024**3, 1), 'services': state, 'model': MODEL}
+    return {'cpu': psutil.cpu_percent(), 'ram_used': round(memory.used / 1024**3, 1), 'ram_total': round(memory.total / 1024**3, 1), 'services': state, 'model': desktop.model}
 
 
 @app.get('/api/sessions')
@@ -348,11 +347,11 @@ async def chat(body: ChatBody, request: Request):
             answer = str(exc)
             yield event({'type': 'delta', 'text': answer})
         except FileNotFoundError as exc:
-            log.exception('Application launch failed')
+            log.error('Application launch failed: %s',type(exc).__name__)
             answer = 'Не удалось найти программу для этой команды. Попробуйте назвать её как в меню «Пуск».'
             yield event({'type': 'delta', 'text': answer})
-        except Exception:
-            log.exception('Chat failed')
+        except Exception as exc:
+            log.error('Chat failed: %s',type(exc).__name__)
             yield event({'type': 'error', 'message': 'Не удалось завершить ответ. Проверьте состояние моделей в настройках и попробуйте ещё раз.'})
         finally:
             if answer and not saved:
@@ -405,7 +404,7 @@ async def speech(body: SpeechBody, request: Request):
         except VoiceCancelled:
             raise HTTPException(499,'Озвучка отменена')
         except Exception as exc:
-            log.exception('Expressive speech failed')
+            log.error('Expressive speech failed: %s',type(exc).__name__)
             raise HTTPException(503,str(exc))
         finally:
             watcher.cancel()
@@ -429,8 +428,8 @@ async def speech(body: SpeechBody, request: Request):
         buffer = io.BytesIO()
         sf.write(buffer, np.concatenate(audio), 48000, format='WAV', subtype='PCM_16')
         return Response(buffer.getvalue(), media_type='audio/wav', headers={'Cache-Control': 'no-store'})
-    except Exception:
-        log.exception('Speech synthesis failed')
+    except Exception as exc:
+        log.error('Speech synthesis failed: %s',type(exc).__name__)
         raise HTTPException(500, 'Не удалось озвучить этот текст. Попробуйте другую формулировку.')
 
 

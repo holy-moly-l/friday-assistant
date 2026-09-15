@@ -46,5 +46,5 @@ for line in sys.stdin:
             print(f"Speech completed: {job['speaker']}, {len(job['text'])} chars, {time.perf_counter()-started:.2f}s",file=sys.stderr,flush=True)
         emit({'ok':True,'sample_rate':sr,'seconds':len(waves[0])/sr})
     except Exception as exc:
-        traceback.print_exc(file=sys.stderr)
+        print(f'Speech failed: {type(exc).__name__}',file=sys.stderr,flush=True)
         emit({'error':str(exc)})
