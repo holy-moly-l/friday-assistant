@@ -7,6 +7,17 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+
+if not exist corpus.json.gz (
+  echo Восстанавливаю встроенный корпус...
+  py -c "import base64,pathlib; p=pathlib.Path('.'); s=''.join((p/f'corpus.b64.part{i}').read_text(encoding='ascii') for i in range(1,6)); (p/'corpus.json.gz').write_bytes(base64.b64decode(s))"
+  if errorlevel 1 (
+    echo Ошибка восстановления corpus.json.gz.
+    pause
+    exit /b 1
+  )
+)
+
 if not exist .venv (
   py -3.12 -m venv .venv 2>nul || py -3.11 -m venv .venv 2>nul || py -m venv .venv
 )

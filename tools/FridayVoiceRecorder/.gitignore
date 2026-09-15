@@ -4,6 +4,7 @@ __pycache__/
 build/
 dist/
 *.spec
+corpus.json.gz
 dataset/wav/*.wav
 dataset/session.json
 dataset/metadata.csv
