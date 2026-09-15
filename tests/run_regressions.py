@@ -19,7 +19,7 @@ TESTS=['desktop_integration.py','desktop_apps_integration.py','desktop_model_che
        'catalog-ui.cjs','refinement-ui.cjs','wake-ui.cjs','recognition-ui.cjs','voice-regression.cjs',
        'voice-native.cjs','wake-minimized.cjs','desktop-native.cjs','voice-diagnose.cjs',
        'integration.py','ui.cjs','microphone.cjs','upgrade-ui.cjs','electron.cjs','startup.cjs','voice-upgrade.cjs',
-       'pc_smoke.py','remaining-voices.py','wake_audio.py']
+       'pc_smoke.py','remaining-voices.py','wake_audio.py','telegram-ui.cjs','telegram_windows_integration.py']
 SHARED={'integration.py','ui.cjs','microphone.cjs','upgrade-ui.cjs','pc_smoke.py','remaining-voices.py'}
 
 

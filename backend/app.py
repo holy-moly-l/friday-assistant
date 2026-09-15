@@ -181,7 +181,7 @@ async def local_only(request: Request, call_next):
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.6.3', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.7.0', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')
@@ -294,7 +294,7 @@ async def chat(body: ChatBody, request: Request):
     text = body.text.strip()
     if not text:
         raise HTTPException(422, 'Введите сообщение')
-    if stop_request(text):
+    if stop_request(text) or desktop.telegram.cancelling(text,body.session_id):
         desktop.stop()
         return StreamingResponse(iter([json.dumps({'type':'delta','text':'Остановлено.'},ensure_ascii=False)+'\n']),media_type='application/x-ndjson')
     if chat_lock.locked():
@@ -302,8 +302,9 @@ async def chat(body: ChatBody, request: Request):
     with connect() as db:
         if not db.execute('SELECT id FROM sessions WHERE id=?', (body.session_id,)).fetchone():
             raise HTTPException(404, 'Разговор не найден')
-    command = None if vision_request(text) else resolve_command(text)
-    if not command and deterministic(text) is None and state['llm'] != 'ready' and not (vision_request(text) and not desktop.vision):
+    messaging = desktop.telegram.handles(text,body.session_id)
+    command = None if messaging or vision_request(text) else resolve_command(text)
+    if not messaging and not command and deterministic(text) is None and state['llm'] != 'ready' and not (vision_request(text) and not desktop.vision):
         raise HTTPException(503, 'Модель ещё загружается. Подождите немного или проверьте настройки.')
     await chat_lock.acquire()
     try:
@@ -518,7 +519,7 @@ async def desktop_approve(body:ApprovalBody):
     except CommandError as exc:raise HTTPException(409,str(exc))
     return {'ok':True}
 
-wake_service.mount(app,TOKEN,PORT,transcribe_wake_pcm,lambda:state['stt']=='ready',desktop.stop)
+wake_service.mount(app,TOKEN,PORT,transcribe_wake_pcm,lambda:state['stt']=='ready',desktop.stop,lambda:bool(desktop.pending))
 
 if (ROOT / 'dist').exists():
     app.mount('/', StaticFiles(directory=str(ROOT / 'dist'), html=True), name='frontend')

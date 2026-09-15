@@ -5,7 +5,7 @@ import re
 import sys
 
 # Closed field allowlist: new callers cannot accidentally log a field value or model answer.
-NUMERIC={'length','hwnd','elements','images','monitor','count','verified','uncertain','image_attached',
+NUMERIC={'length','message_length','draft_remaining','hwnd','elements','images','monitor','count','verified','uncertain','image_attached',
          'changed_ratio','target_difference','displacement','restored','fallback','redacted','non_fatal'}
 ENUMS={
     'route':{'deterministic','vision','model'},
@@ -14,7 +14,7 @@ ENUMS={
     'method':{'PrintWindow','MonitorCropFallback','ImageGrab'},
     'tool':{'open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor'},
     'kind':{'exe','shortcut','shell'},
-    'intent':{'open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor','vision','stop','conversation','unknown'},
+    'intent':{'telegram_send_message','open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor','vision','stop','conversation','unknown'},
     'status':{'success','error','cancelled','unavailable','requested'},
 }
 

@@ -13,6 +13,12 @@ def after_wake(text):
     match=WAKE.match(text)
     return text[match.end():].strip() if match else None
 
+def confirmation_stop(text,final,awaiting_confirmation):
+    if re.search(r'\bпятница\s+(?:стоп|остановись|останови)\b',text,re.I):return True
+    # Require a complete short utterance, not a partial "не...".
+    return bool(final and awaiting_confirmation and text.strip(' .!?').casefold() in
+                ('нет','отмена','отмени','не отправляй','не надо','пятница отмена','пятница нет'))
+
 class WakeSession:
     """One recognizer per microphone connection; maximum 20 s in-memory audio."""
     def __init__(self,recognizer):
@@ -73,7 +79,7 @@ class WakeService:
                 except Exception:self.status='error';raise
         return KaldiRecognizer(self.model,SAMPLE_RATE)
 
-    def mount(self,app,token,port,transcribe,ready,on_stop=lambda:None):
+    def mount(self,app,token,port,transcribe,ready,on_stop=lambda:None,awaiting_confirmation=lambda:False):
         slots=asyncio.Semaphore(2)
         @app.websocket('/api/wake')
         async def wake(socket:WebSocket):
@@ -104,7 +110,8 @@ class WakeService:
                                 if not pcm or len(pcm)%2 or len(pcm)>12800:raise ValueError('Invalid PCM')
                                 final=detector.recognizer.AcceptWaveform(pcm)
                                 data=json.loads(detector.recognizer.Result() if final else detector.recognizer.PartialResult())
-                                return bool(re.search(r'\bпятница\s+(?:стоп|остановись|останови)\b',data.get('text',data.get('partial','')),re.I))
+                                recognized=data.get('text',data.get('partial',''))
+                                return confirmation_stop(recognized,final,awaiting_confirmation())
                             if await asyncio.to_thread(detect_stop):
                                 on_stop()
                                 await socket.send_json({'type':'stopped'})

@@ -10,6 +10,8 @@
 | Faster Qwen3-TTS 0.2.6 | https://github.com/andimarafioti/faster-qwen3-tts | MIT; текст в licenses/Faster-Qwen3-TTS-LICENSE.txt |
 | Pycaw | https://github.com/AndreMiras/pycaw | MIT |
 | Pillow | https://python-pillow.org | HPND |
+| pymorphy3 2.0.6 | https://github.com/no-plagiarism/pymorphy3 | MIT |
+| pymorphy3-dicts-ru / dawg2-python | https://github.com/no-plagiarism/pymorphy3-dicts | Лицензии установленных пакетов: MIT; данные словаря основаны на OpenCorpora |
 | Whisper Small | https://huggingface.co/Systran/faster-whisper-small | MIT |
 | Vosk API / Small Russian 0.22 | https://alphacephei.com/vosk/models | Apache-2.0 |
 | Faster Whisper | https://github.com/SYSTRAN/faster-whisper | MIT |

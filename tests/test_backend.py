@@ -20,6 +20,19 @@ def test_auth_and_origin(client):
     assert client.post('/api/sessions', headers={'origin':'https://evil.example'}).status_code == 403
     assert client.get('/api/health').status_code == 200
 
+
+def test_messaging_routes_without_ollama_and_cancels_between_turns(client,monkeypatch,tmp_path):
+    from desktop_agent import DesktopAgent
+    agent=DesktopAgent(tmp_path)
+    monkeypatch.setattr(friday,'desktop',agent)
+    monkeypatch.setitem(friday.state,'llm','error')
+    sid=client.post('/api/sessions').json()['id']
+    response=client.post('/api/chat',json={'session_id':sid,'text':'Напиши Насте'})
+    assert response.status_code==200 and 'Что написать Насте?' in response.text
+    assert agent.telegram.pending_messages[sid].recipient=='Настя'
+    response=client.post('/api/chat',json={'session_id':sid,'text':'отмена'})
+    assert response.status_code==200 and not agent.telegram.pending_messages
+
 def test_commands_cannot_inject_shell():
     assert friday.resolve_command('Открой калькулятор') == ('open', 'калькулятор')
     assert friday.resolve_command('Пятница, открой блокнот.') == ('open', 'блокнот')

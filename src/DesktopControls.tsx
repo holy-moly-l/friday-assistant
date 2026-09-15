@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './desktop.css';
 type API=(path:string,options?:RequestInit)=>Promise<any>;
-export type Activity={steps:{label:string;status:string;evidence?:string}[];approval?:{nonce:string;label:string;window:string;reason:string;text:string;element?:{name:string;value?:string};image?:string;x:number;y:number};notice?:string};
+export type Activity={steps:{label:string;status:string;evidence?:string}[];approval?:{kind?:string;nonce:string;label:string;window:string;reason:string;text:string;element?:{name:string;value?:string};image?:string;x:number;y:number};notice?:string};
 export function DesktopActivity({value,onApprove,onStop}:{value:Activity;onApprove:(nonce:string,allow:boolean)=>Promise<void>;onStop:()=>void}){
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const approval=value.approval;
@@ -14,7 +14,7 @@ export function DesktopActivity({value,onApprove,onStop}:{value:Activity;onAppro
     {value.notice&&<p>{value.notice}</p>}
     {approval&&<div className="desktop-approval"><strong>{approval.label}</strong><p>Окно: {approval.window}</p>{approval.element?.name&&<p>Элемент: {approval.element.name}</p>}<p>{approval.reason}</p>{approval.text&&<blockquote>{approval.text}</blockquote>}
       {approval.image&&<div className="approval-image"><img alt="Окно перед нажатием" src={'data:image/jpeg;base64,'+approval.image}/><i style={{left:approval.x*100+'%',top:approval.y*100+'%'}}/></div>}
-      <div className="desktop-actions"><button className="primary-button" disabled={busy} onClick={async()=>{setBusy(true);try{await onApprove(approval.nonce,true);}catch(e){setError((e as Error).message);setBusy(false);}}}>Подтвердить действие</button><button disabled={busy} onClick={()=>{void onApprove(approval.nonce,false).catch(e=>setError(e.message));}}>Отмена</button></div>{error&&<p role="alert">{error}</p>}
+      <div className="desktop-actions"><button className="primary-button" disabled={busy} onClick={async()=>{setBusy(true);try{await onApprove(approval.nonce,true);}catch(e){setError((e as Error).message);setBusy(false);}}}>{approval.kind==='telegram_message'?'Отправить сообщение':'Подтвердить действие'}</button><button disabled={busy} onClick={()=>{void onApprove(approval.nonce,false).catch(e=>setError(e.message));}}>{approval.kind==='telegram_message'?'Нет':'Отмена'}</button></div>{error&&<p role="alert">{error}</p>}
     </div>}
   </section>;
 }

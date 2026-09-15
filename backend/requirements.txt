@@ -12,3 +12,4 @@ Pillow==12.3.0
 vosk==0.3.45
 websockets==17.1
 uiautomation==2.0.29
+pymorphy3==2.0.6

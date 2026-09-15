@@ -19,6 +19,7 @@ from desktop_trace import trace
 from desktop_vision import image_query, structured_answer
 from desktop_display import display_number
 from desktop_images import scene_stable,target_stable
+from telegram_messages import TelegramMessages
 
 MODELS=('qwen3.5:0.8b','qwen3.5:2b','qwen3.5:4b','qwen3.5:9b')
 OLLAMA='http://127.0.0.1:11434'
@@ -233,6 +234,7 @@ class DesktopAgent:
         except (OSError,ValueError):pass
         self.context={};self.cancel=threading.Event();self.running=False;self.pending=None
         self.download={'status':'idle'};self.download_task=None
+        self.telegram=TelegramMessages()
     def settings(self):return dict(model=self.model,vision=self.vision,choices=MODELS,download=self.download)
     def save(self,model,vision):
         if self.running:raise CommandError('Сначала остановите текущую команду.')
@@ -240,7 +242,9 @@ class DesktopAgent:
         self.model=model;self.vision=vision
         temp=self.path.with_suffix('.tmp');temp.write_text(json.dumps(dict(model=model,vision=vision)),encoding='utf-8');temp.replace(self.path)
     def stop(self,*,requested=True):
-        if requested:trace('STOP',status='cancelled')
+        if requested:
+            trace('STOP',status='cancelled')
+            self.telegram.stop()
         self.cancel.set()
         if self.pending:self.pending['decision']=False
     def approve(self,nonce,allow):
@@ -364,6 +368,9 @@ class DesktopAgent:
         self.running=True;self.cancel=threading.Event();run_id=secrets.token_urlsafe(12)
         completed=[];screenshot=None;screenshot_rect=None;screen_window=None
         try:
+            if self.telegram.handles(text,session) and not stop_request(text):
+                async for event in self.telegram.run(self,text,session):yield event
+                return
             initial=deterministic(text)
             trace('INPUT',length=len(text),intent=initial.steps[0].tool if initial else 'vision' if vision_request(text) else 'conversation')
             if stop_request(text):
