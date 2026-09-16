@@ -13,6 +13,7 @@ from desktop_agent import DesktopAgent
 async def main():
     with tempfile.TemporaryDirectory() as temp:
         agent=DesktopAgent(temp)
+        agent.ai.mode='local'
         examples=[
             ('Перекинь вот это окошко на второй экран, пожалуйста',{'window':{'title':'Калькулятор'},'monitors':[{'index':1},{'index':2}]},None),
             ('С музыкой перебор, убавь немного громкость',{},None),

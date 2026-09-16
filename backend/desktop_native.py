@@ -424,7 +424,7 @@ def _capture_bounds(rect,scope,target,cancel,method='ImageGrab'):
     try:im=ImageGrab.grab(bbox=tuple(rect),all_screens=True)
     except OSError as exc:raise CommandError('Windows не предоставила снимок рабочего стола.') from exc
     check(cancel);original=list(im.size)
-    im.thumbnail((1920,1440) if scope=='window' else (2560,1600));buf=io.BytesIO();im.convert('RGB').save(buf,format='PNG')
+    buf=io.BytesIO();im.convert('RGB').save(buf,format='PNG')
     result=dict(image=base64.b64encode(buf.getvalue()).decode('ascii'),rect=rect,size=list(im.size),
         original_size=original,scope=scope,target=target,method=method)
     trace('SCREEN',**{k:v for k,v in result.items() if k!='image'})

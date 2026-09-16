@@ -15,6 +15,7 @@ from desktop_native import Stopped
 async def main():
     with tempfile.TemporaryDirectory() as folder:
         agent=DesktopAgent(folder);buf=io.BytesIO();Image.new('RGB',(640,480),'navy').save(buf,format='PNG')
+        agent.ai.mode='local'
         image=base64.b64encode(buf.getvalue()).decode()
         task=asyncio.create_task(agent.cancellable(agent.describe('Подробно опиши изображение и его цвета.',image)))
         await asyncio.sleep(.1);started=time.monotonic();agent.stop()

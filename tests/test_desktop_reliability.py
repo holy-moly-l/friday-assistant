@@ -27,7 +27,7 @@ WINDOW=dict(hwnd=42,pid=12,created=1,title='Test',process='Telegram.exe',rect=[0
  ('Что открыто на экране?','monitor'),('Что видно на компьютере?','monitor'),
  ('Что здесь?','window'),('Что тут?','window'),('Прочитай экран','monitor'),
  ('Что в этом окне?','window'),('Что написано в Telegram?','window'),
- ('Найди здесь кнопку продолжить','window'),('Посмотри на рабочий стол','monitor'),
+ ('Посмотри на рабочий стол','monitor'),
  ('Что на всех мониторах?','all_screens'),('Что видно на втором мониторе?','monitor'),
 ])
 def test_explicit_vision_routing(phrase,scope,tmp_path,monkeypatch):

@@ -246,7 +246,7 @@ function App() {
       <div className="recent-heading"><span className="nav-label">НЕДАВНИЕ РАЗГОВОРЫ</span><History size={13}/></div>
       <div className="recent-list">{sessions.filter(s=>s.count).slice(0,4).map(s=><button key={s.id} onClick={()=>openSession(s)} disabled={pending||phase==='listening'}><MessageSquare size={14}/><span>{s.title}</span></button>)}{!sessions.some(s=>s.count)&&<p>Пока нет разговоров</p>}</div>
       <div className="sidebar-bottom"><button aria-current={tab==='settings'?'page':undefined} className={'nav-item '+(tab==='settings'?'selected':'')} onClick={()=>setTab('settings')}><Settings2 size={18}/><span>Настройки</span></button>
-      <div className="sidebar-local"><ShieldCheck size={14}/><span>Всё остаётся на вашем ПК</span></div></div>
+      <div className="sidebar-local"><ShieldCheck size={14}/><span>Голос обрабатывается локально</span></div></div>
     </aside>
 
     <div className="workspace">

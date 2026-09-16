@@ -6,16 +6,18 @@ import sys
 
 # Closed field allowlist: new callers cannot accidentally log a field value or model answer.
 NUMERIC={'length','message_length','draft_remaining','hwnd','elements','images','monitor','count','verified','uncertain','image_attached',
-         'changed_ratio','target_difference','displacement','restored','fallback','redacted','non_fatal'}
+         'changed_ratio','target_difference','displacement','restored','fallback','redacted','non_fatal',
+         'capture_ms','preprocess_ms','upload_start_ms','request_started_ms','first_response_ms','total_ms','chain_ms','fallback_ms','size_kb'}
 ENUMS={
     'route':{'deterministic','vision','model'},
     'operation':{'inspect','click','press_key','type_text','scroll'},
     'scope':{'window','monitor','all_screens'},
     'method':{'PrintWindow','MonitorCropFallback','ImageGrab'},
-    'tool':{'open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor'},
+    'tool':{'open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor','find_element'},
     'kind':{'exe','shortcut','shell'},
-    'intent':{'telegram_send_message','open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor','vision','stop','conversation','unknown'},
-    'status':{'success','error','cancelled','unavailable','requested'},
+    'intent':{'telegram_send_message','open_app','window','volume','click','type_text','press_key','scroll','click_point','list_windows','get_active_window','list_monitors','window_monitor','find_element','vision','stop','conversation','unknown'},
+    'status':{'success','error','cancelled','unavailable','requested','connected','not_authenticated','usage_limit','timeout','invalid_response'},
+    'provider':{'codex','ollama'},'reasoning':{'low'},
 }
 
 
@@ -31,7 +33,7 @@ def trace(stage, message='', **fields):
     for key,value in fields.items():
         if key in NUMERIC and type(value) in (int,float,bool):safe[key]=value
         elif key in ENUMS and isinstance(value,str) and value in ENUMS[key]:safe[key]=value
-        elif key=='model' and isinstance(value,str) and re.fullmatch(r'qwen3\.5:(?:0\.8|2|4|9)b',value):safe[key]=value
+        elif key=='model' and isinstance(value,str) and re.fullmatch(r'qwen3\.5:(?:0\.8|2|4|9)b|gpt-5\.6-(?:luna|terra)',value):safe[key]=value
         elif key in ('size','original_size','rect') and isinstance(value,(list,tuple)) and all(type(v)==int for v in value):safe[key]=value
     if message or len(safe)<len(fields):safe['redacted']=True
     print(f'[{stage}] '+json.dumps(safe,ensure_ascii=False),file=sys.stderr,flush=True)

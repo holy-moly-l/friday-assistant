@@ -9,6 +9,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Literal
 import re
 import secrets
 import sqlite3
@@ -151,7 +152,9 @@ async def lifespan(app):
     pool = ThreadPoolExecutor(max_workers=3)
     for fn in (load_voice, load_whisper, warm_llm):
         pool.submit(fn)
+    codex_health=asyncio.create_task(desktop.ai.codex.health_check()) if desktop.ai.mode!='local' else None
     yield
+    if codex_health and not codex_health.done():codex_health.cancel()
     desktop.stop()
     desktop.foreground.closed.set()
     expressive.close()
@@ -181,7 +184,7 @@ async def local_only(request: Request, call_next):
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.7.0', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.8.0', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')
@@ -197,7 +200,7 @@ def retry_models():
 @app.get('/api/system')
 def system():
     memory = psutil.virtual_memory()
-    return {'cpu': psutil.cpu_percent(), 'ram_used': round(memory.used / 1024**3, 1), 'ram_total': round(memory.total / 1024**3, 1), 'services': state, 'model': desktop.model}
+    return {'cpu': psutil.cpu_percent(), 'ram_used': round(memory.used / 1024**3, 1), 'ram_total': round(memory.total / 1024**3, 1), 'services': state, 'model': desktop.model, 'ai':desktop.ai.settings()}
 
 
 @app.get('/api/sessions')
@@ -304,7 +307,7 @@ async def chat(body: ChatBody, request: Request):
             raise HTTPException(404, 'Разговор не найден')
     messaging = desktop.telegram.handles(text,body.session_id)
     command = None if messaging or vision_request(text) else resolve_command(text)
-    if not messaging and not command and deterministic(text) is None and state['llm'] != 'ready' and not (vision_request(text) and not desktop.vision):
+    if not messaging and not command and deterministic(text) is None and state['llm'] != 'ready' and not vision_request(text) and not desktop.ai.cloud_for(task=text):
         raise HTTPException(503, 'Модель ещё загружается. Подождите немного или проверьте настройки.')
     await chat_lock.acquire()
     try:
@@ -481,6 +484,11 @@ def transcribe_wake_pcm(pcm):
 class DesktopSettingsBody(BaseModel):
     model: str
     vision: bool = True
+    ai_mode: Literal['local','hybrid','codex_vision'] | None = None
+    cloud_model: Literal['gpt-5.6-luna','gpt-5.6-terra'] | None = None
+    local_fallback: bool | None = None
+    image_optimization: bool | None = None
+    vision_provider: Literal['ollama','codex'] | None = None
 
 class ApprovalBody(BaseModel):
     nonce: str = Field(min_length=1,max_length=100)
@@ -489,6 +497,7 @@ class ApprovalBody(BaseModel):
 @app.get('/api/desktop/settings')
 async def desktop_settings():
     result=desktop.settings()
+    result['codex']=await desktop.ai.codex.health_check()
     try:
         result['installed']=await desktop.model_list()
         if desktop.model in result['installed']:
@@ -498,9 +507,10 @@ async def desktop_settings():
 
 @app.post('/api/desktop/settings')
 async def desktop_save(body:DesktopSettingsBody):
-    try:desktop.save(body.model,body.vision)
+    previous=desktop.model
+    try:desktop.save(**body.model_dump())
     except CommandError as exc:raise HTTPException(409,str(exc))
-    await asyncio.to_thread(warm_llm)
+    if previous!=desktop.model:await asyncio.to_thread(warm_llm)
     return desktop.settings()
 
 @app.post('/api/desktop/download')

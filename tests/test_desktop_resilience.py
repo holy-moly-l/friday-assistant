@@ -170,14 +170,13 @@ def test_destructive_tab_cannot_bypass_approval(name):
     '{"reply":"Ошибка 810","needs_vision":false,"steps":[]}',
 ])
 def test_planner_accepts_wrapped_json_without_extra_model_request(response,tmp_path,monkeypatch):
-    class Client:
-        async def __aenter__(self):return self
-        async def __aexit__(self,*args):pass
-        async def post(self,*args,**kw):
-            return Mock(raise_for_status=lambda:None,json=lambda:{'message':{'content':response}})
-    monkeypatch.setattr(d.httpx,'AsyncClient',lambda **kw:Client())
-    plan=asyncio.run(d.DesktopAgent(tmp_path).plan('Объясни ошибку',[],{}))
+    from ai_providers import AIResult
+    agent=d.DesktopAgent(tmp_path);calls=[]
+    async def request(*a,**kw):calls.append(a);return AIResult(response,'ollama',agent.model)
+    monkeypatch.setattr(agent.ai.local,'plan',request)
+    plan=asyncio.run(agent.plan('Объясни ошибку',[],{}))
     assert not plan.steps and plan.reply=='Ошибка 810'
+    assert len(calls)==1
 
 
 def test_wrapped_plan_still_rejects_unknown_tools():

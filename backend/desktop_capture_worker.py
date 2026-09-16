@@ -55,7 +55,7 @@ def capture(window):
         if all(low == high for low, high in im.getextrema()):
             raise ValueError('Получен пустой снимок окна. Приложение может блокировать захват; попробуйте снимок монитора.')
         if same(window)['rect'] != rect: raise ValueError('Окно переместилось во время снимка. Повторите запрос.')
-        im.thumbnail((1920, 1440)); buf = io.BytesIO(); im.save(buf, format='PNG')
+        buf = io.BytesIO(); im.save(buf, format='PNG')
         return dict(image=base64.b64encode(buf.getvalue()).decode('ascii'), rect=rect,
                     size=list(im.size), original_size=[width, height], scope='window',
                     target={'hwnd':window['hwnd'], 'title':current['title']}, method='PrintWindow')
