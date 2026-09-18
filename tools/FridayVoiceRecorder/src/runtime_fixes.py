@@ -34,21 +34,27 @@ def install_hotfixes(fvr) -> None:
             piper_lines.append(f"{item.id}.wav|{text}")
             excel_rows.append((f"{item.id}.wav", text))
 
-        # Exact machine-readable file for Piper / training code.
-        (self.dataset_dir / "metadata_piper.csv").write_text(
-            "\n".join(piper_lines) + ("\n" if piper_lines else ""),
-            encoding="utf-8",
-        )
+        warnings: list[str] = []
 
-        # Human-readable file for Microsoft Excel on Windows.
-        # utf-8-sig makes Excel detect Cyrillic correctly; semicolon opens as columns
-        # on Russian/European Windows locales.
-        with (self.dataset_dir / "metadata.csv").open(
-            "w", encoding="utf-8-sig", newline=""
-        ) as fh:
-            writer = csv.writer(fh, delimiter=";")
-            writer.writerow(["audio", "text"])
-            writer.writerows(excel_rows)
+        try:
+            (self.dataset_dir / "metadata_piper.csv").write_text(
+                "\n".join(piper_lines) + ("\n" if piper_lines else ""),
+                encoding="utf-8",
+            )
+        except PermissionError:
+            warnings.append("metadata_piper.csv занят другой программой")
+
+        try:
+            with (self.dataset_dir / "metadata.csv").open(
+                "w", encoding="utf-8-sig", newline=""
+            ) as fh:
+                writer = csv.writer(fh, delimiter=";")
+                writer.writerow(["audio", "text"])
+                writer.writerows(excel_rows)
+        except PermissionError:
+            warnings.append("metadata.csv открыт в Excel")
+
+        self._metadata_warnings = warnings
 
     def save_pending_audio(self) -> None:
         if self.pending_audio is None:
@@ -61,7 +67,13 @@ def install_hotfixes(fvr) -> None:
         self.quality_label.setText(
             f"✓ Сохранено • {metrics['duration']:.1f} с • пик {metrics['peak_db']:.1f} dBFS • RMS {metrics['rms_db']:.1f} dBFS"
         )
-        self.statusBar().showMessage(f"Сохранено: {path.name}")
+        metadata_warnings = getattr(self, "_metadata_warnings", [])
+        if metadata_warnings:
+            self.statusBar().showMessage(
+                f"Сохранено: {path.name} • метаданные обновятся после закрытия Excel"
+            )
+        else:
+            self.statusBar().showMessage(f"Сохранено: {path.name}")
         self.pending_audio = None
         self.pending_metrics = None
         self.save_session()
