@@ -1,1 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><rect width="256" height="256" rx="62" fill="#0c121c"/><rect x="12" y="12" width="232" height="232" rx="53" fill="none" stroke="#56cfff" stroke-opacity=".15" stroke-width="3"/><g stroke="#56cfff" stroke-width="12" stroke-linecap="round"><path d="M61 115v26M88 86v84M115 60v136M142 103v50M169 80v94M196 117v22"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(84 54) rotate(49) scale(238)">
+      <stop stop-color="#17233A"/>
+      <stop offset="0.55" stop-color="#0C1322"/>
+      <stop offset="1" stop-color="#070A12"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(96 86) rotate(53) scale(117)">
+      <stop stop-color="#233764"/>
+      <stop offset="0.52" stop-color="#121B34"/>
+      <stop offset="1" stop-color="#090D19"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="46" y1="57" x2="214" y2="205" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#86E7FF"/>
+      <stop offset="0.48" stop-color="#6A7CFF"/>
+      <stop offset="1" stop-color="#B785FF"/>
+    </linearGradient>
+    <linearGradient id="star" x1="128" y1="81" x2="128" y2="177" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E8FBFF"/>
+      <stop offset="0.48" stop-color="#7FD8FF"/>
+      <stop offset="1" stop-color="#B88CFF"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.2"/>
+    </filter>
+  </defs>
+
+  <rect x="4" y="4" width="248" height="248" rx="58" fill="url(#bg)"/>
+  <rect x="5" y="5" width="246" height="246" rx="57" stroke="#A5C9FF" stroke-opacity="0.10" stroke-width="2"/>
+
+  <circle cx="128" cy="128" r="75" fill="url(#orb)" stroke="#8CCFFF" stroke-opacity="0.22" stroke-width="1.5"/>
+  <circle cx="128" cy="128" r="68" stroke="#A9B7FF" stroke-opacity="0.08"/>
+
+  <ellipse cx="128" cy="128" rx="92" ry="42" transform="rotate(-17 128 128)" stroke="url(#ring)" stroke-width="2.2" stroke-opacity="0.9"/>
+  <ellipse cx="128" cy="128" rx="92" ry="42" transform="rotate(-17 128 128)" stroke="#9FEAFF" stroke-width="7" stroke-opacity="0.09" filter="url(#soft)"/>
+
+  <circle cx="205" cy="97" r="5.5" fill="#DDFBFF" stroke="#7FE0FF" stroke-width="1.2" filter="url(#glow)"/>
+  <circle cx="53" cy="164" r="3.6" fill="#E5E4FF" stroke="#A68CFF" stroke-width="1" filter="url(#glow)"/>
+
+  <g filter="url(#glow)">
+    <path d="M128 79C132 103 134 113 142 120C149 126 159 128 184 128C159 130 149 132 142 138C134 145 132 155 128 179C124 155 122 145 114 138C107 132 97 130 72 128C97 128 107 126 114 120C122 113 124 103 128 79Z" fill="url(#star)"/>
+  </g>
+  <circle cx="128" cy="128" r="3.8" fill="#F4FDFF"/>
+</svg>
