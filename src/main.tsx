@@ -239,7 +239,7 @@ function App() {
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <a className="brand" href="#" onClick={e=>{e.preventDefault();setTab('assistant');}}><span className="brand-mark"><AudioLines size={24}/></span><span>пятница<span className="brand-dot">.</span></span></a>
+      <a className="brand" href="#" onClick={e=>{e.preventDefault();setTab('assistant');}}><span className="brand-mark"><img src="/friday.svg" alt="" width="40" height="40"/></span><span>пятница<span className="brand-dot">.</span></span></a>
       <button className="new-chat" onClick={newChat} disabled={pending||phase==='listening'}><Plus size={17}/>Новый разговор<span>↗</span></button>
       
       <nav>{([{id:'assistant',icon:AudioLines},{id:'history',icon:History},{id:'commands',icon:Command},{id:'notes',icon:StickyNote}] as const).map(item=><button key={item.id} aria-current={tab===item.id?'page':undefined} className={'nav-item '+(tab===item.id?'selected':'')} onClick={()=>{setTab(item.id);setSearch('');}}><item.icon size={18}/><span>{item.id==='history'?'История':item.id==='commands'?'Команды':titles[item.id]}</span>{tab===item.id&&<span className="nav-active"/>}</button>)}</nav>
@@ -292,5 +292,4 @@ function App() {
 }
 
 createRoot(document.getElementById('root')!).render(<App/>);
-
 
