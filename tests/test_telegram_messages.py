@@ -11,6 +11,16 @@ from telegram_language import message_intent, recipient_name, recipient_matches
 from telegram_uia_worker import TelegramUI, chat_title
 from pc import CommandError
 from wake_word import confirmation_stop
+from message_composer import ComposedMessage
+
+
+class FakeComposer:
+    """State-machine tests isolate language generation from delivery."""
+    def __init__(self,text=None):self.text=text;self.calls=[]
+    def cancel(self):pass
+    async def compose_message(self,raw_text,recipient,context=None,**kwargs):
+        self.calls.append((raw_text,recipient,kwargs))
+        return ComposedMessage(self.text if self.text is not None else raw_text,kwargs.get('verbatim',False))
 
 
 @pytest.mark.parametrize('phrase,recipient,text', [
@@ -53,6 +63,28 @@ def test_names_are_not_fuzzy_and_body_is_literal():
     assert chat_title('\u200e(2) Настя – (1234)') == '(2) Настя'
 
 
+def test_multi_account_titles_keep_chat_names_and_bind_account():
+    from telegram_uia_worker import title_parts
+    assert chat_title('\u200eИзбранное @ \u200eAccount A (1234)')=='Избранное'
+    assert chat_title('(2) \u200eНастя @ \u200eAccount A (1234)')=='Настя'
+    assert chat_title('\u200eКлуб @ друзья – (1234)')=='Клуб @ друзья'
+    assert chat_title('\u200eКлуб @ друзья @ \u200eAccount A (1234)')=='Клуб @ друзья'
+    a=title_parts('\u200eИзбранное @ \u200eAccount A (1234)')[1]
+    assert a==title_parts('\u200eИзбранное @ \u200eAccount A (1235)')[1]
+    assert a!=title_parts('\u200eИзбранное @ \u200eAccount B (1234)')[1]
+
+
+def test_account_switch_rejected_even_if_chat_title_and_controls_match(monkeypatch):
+    from telegram_uia_worker import title_parts, identity
+    ui=object.__new__(TelegramUI)
+    old='\u200eНастя @ \u200eAccount A (10)'
+    new='\u200eНастя @ \u200eAccount B (11)'
+    composer=Row(1,'','');history=Row(2,'','')
+    ui.guard=lambda:{'title':new};ui.composer=lambda:composer;ui.history=lambda:history
+    expected=dict(title='Настя',composer=identity(composer),history=identity(history),account=title_parts(old)[1])
+    with pytest.raises(ValueError,match='Аккаунт'):ui.read_state(expected)
+
+
 class FakeTelegram:
     def __init__(self):
         self.calls = []; self.sent = 0; self.draft = ''; self.verified = True
@@ -91,7 +123,7 @@ class FakeTelegram:
 @pytest.fixture
 def setup(tmp_path):
     fake = FakeTelegram(); agent = DesktopAgent(tmp_path)
-    agent.telegram = TelegramMessages(fake.call, fake.launch)
+    agent.telegram = TelegramMessages(fake.call, fake.launch, FakeComposer())
     async def forbidden(*args, **kwargs): raise AssertionError('Messaging must not call Ollama')
     agent.plan = agent.describe = forbidden
     return agent, fake

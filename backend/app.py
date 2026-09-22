@@ -184,7 +184,7 @@ async def local_only(request: Request, call_next):
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.8.0', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.8.1', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')

@@ -20,6 +20,7 @@ from desktop_vision import structured_answer
 from desktop_display import display_number
 from desktop_images import scene_stable,target_stable
 from telegram_messages import TelegramMessages
+from message_composer import MessageComposer
 from ai_router import ModelRouter,AI_MODES,crop_image,map_box,decode
 from ai_providers import CLOUD_MODELS
 
@@ -241,7 +242,7 @@ class DesktopAgent:
         except (OSError,ValueError):pass
         self.context={};self.cancel=threading.Event();self.running=False;self.pending=None
         self.download={'status':'idle'};self.download_task=None
-        self.telegram=TelegramMessages()
+        self.telegram=TelegramMessages(composer=MessageComposer(before_model))
         self.ai=ModelRouter(self.model,before_model,
             mode=saved.get('ai_mode') if saved.get('ai_mode') in AI_MODES else 'hybrid',
             cloud_model=saved.get('cloud_model') if saved.get('cloud_model') in CLOUD_MODELS else CLOUD_MODELS[0],

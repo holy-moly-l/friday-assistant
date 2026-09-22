@@ -25,7 +25,7 @@ BODY = 'Тест Пятницы: проверка отправки'
 
 async def workflow(agent, decision):
     events = []; approvals = 0
-    async for event in agent.run('Напиши себе '+BODY, 'self-integration', []):
+    async for event in agent.run('Напиши себе дословно: '+BODY, 'self-integration', []):
         events.append(event)
         if event['type'] == 'approval':
             assert event['kind'] == 'telegram_message' and event['text'] == BODY

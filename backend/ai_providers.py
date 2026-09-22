@@ -252,8 +252,9 @@ class CodexProvider:
 REPLY_SCHEMA={'type':'object','properties':{'reply':{'type':'string','maxLength':1500}},'required':['reply'],'additionalProperties':False}
 
 class LocalOllamaProvider:
-    def __init__(self,model=LOCAL_MODEL,before_model=None,timeout=120):
+    def __init__(self,model=LOCAL_MODEL,before_model=None,timeout=120,options=None):
         self.model=model;self.before_model=before_model;self.timeout=timeout;self._tasks=set()
+        self.options={'temperature':0,'num_ctx':8192,'num_predict':1600,**(options or {})}
     def cancel(self):
         for task in tuple(self._tasks):task.cancel()
     async def health_check(self):
@@ -286,7 +287,7 @@ class LocalOllamaProvider:
                 async with httpx.AsyncClient(timeout=self.timeout,trust_env=False) as client:
                     sent=round((time.perf_counter()-started)*1000)
                     async with client.stream('POST',OLLAMA+'/api/chat',json=dict(model=self.model,messages=messages,
-                        format=schema,stream=True,think=False,keep_alive='2m',options={'temperature':0,'num_ctx':8192,'num_predict':1600})) as response:
+                        format=schema,stream=True,think=False,keep_alive='2m',options=self.options)) as response:
                         response.raise_for_status()
                         async for line in response.aiter_lines():
                             if not line:continue

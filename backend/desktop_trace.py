@@ -7,7 +7,8 @@ import sys
 # Closed field allowlist: new callers cannot accidentally log a field value or model answer.
 NUMERIC={'length','message_length','draft_remaining','hwnd','elements','images','monitor','count','verified','uncertain','image_attached',
          'changed_ratio','target_difference','displacement','restored','fallback','redacted','non_fatal',
-         'capture_ms','preprocess_ms','upload_start_ms','request_started_ms','first_response_ms','total_ms','chain_ms','fallback_ms','size_kb'}
+         'capture_ms','preprocess_ms','upload_start_ms','request_started_ms','first_response_ms','total_ms','chain_ms','fallback_ms','size_kb',
+         'input_length','output_length','latency_ms','verbatim'}
 ENUMS={
     'route':{'deterministic','vision','model'},
     'operation':{'inspect','click','press_key','type_text','scroll'},

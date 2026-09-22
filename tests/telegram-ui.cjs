@@ -34,8 +34,13 @@ const path=require('node:path');
   await page.getByRole('button',{name:'Стоп',exact:true}).click();
   await expect(page.getByRole('button',{name:'Отправить сообщение',exact:true})).toHaveCount(0);
   await expect.poll(async()=>(await state()).draft_length).toBe(0);expect((await state()).sent).toBe(1);
+  await send('Напиши Насте, что пусть приедет сегодня в 12 часов');
+  await expect(page.locator('.desktop-approval blockquote')).toHaveText('Приезжай сегодня в 12 часов.');
+  expect((await state()).sent).toBe(1);
+  await page.getByRole('button',{name:'Нет',exact:true}).click();
+  await expect.poll(async()=>(await state()).draft_length).toBe(0);
   expect(errors).toEqual([]);
-  console.log('TELEGRAM UI PASS: literal draft, confirmation, No, stop, context, no unapproved send');
+  console.log('TELEGRAM UI PASS: composed draft, exact final confirmation, No, stop, context, no unapproved send');
  }catch(e){console.error(logs);throw e;}
  finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1)});

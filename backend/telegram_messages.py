@@ -1,4 +1,4 @@
-"""Deterministic Telegram messaging state machine, independent of Ollama.
+"""Deterministic Telegram delivery with an isolated local pre-draft composer.
 
 The single Send call is reachable only after an expiring one-use UI confirmation.
 No retry follows a send attempt, even on timeout, cancellation, or lost UI state.
@@ -14,7 +14,8 @@ import telegram_uia
 from desktop_trace import trace
 from pc import CommandError
 from command_language import request_text
-from telegram_language import message_intent, recipient_name, recipient_matches, key, SELF, PRONOUNS, CANCEL
+from telegram_language import message_intent, message_body, recipient_name, recipient_matches, key, SELF, PRONOUNS, CANCEL
+from message_composer import MessageComposer, CompositionError
 
 
 @dataclass
@@ -27,14 +28,19 @@ class PendingMessage:
     window: dict | None = None
     username: str = ''
     expires: float = field(default_factory=lambda: time.monotonic() + 600)
+    raw_text: str | None = None
+    verbatim: bool = False
+    mode: str = 'statement'
+    composed_for: str = ''
 
 
 class TelegramMessages:
-    def __init__(self, adapter=telegram_uia.call, launch=native.launch):
+    def __init__(self, adapter=telegram_uia.call, launch=native.launch, composer=None):
         self.adapter = adapter
         self.launch = launch
         self.pending_messages = {}
         self.context = {}
+        self.composer = composer or MessageComposer()
 
     def prune(self):
         now = time.monotonic()
@@ -46,6 +52,7 @@ class TelegramMessages:
             while len(mapping) > 100: mapping.pop(next(iter(mapping)))
 
     def stop(self):
+        self.composer.cancel()
         self.pending_messages.clear()
 
     def cancelling(self, text, session):
@@ -81,11 +88,15 @@ class TelegramMessages:
             yield dict(type='delta', text='Отменено. Сообщение не отправляла.'); return
         intent = message_intent(text)
         item = self.pending_messages.get(session)
-        if intent:
+        if item and item.status == 'awaiting_composition' and key(request_text(text)) in {
+                'отправь дословно','напиши дословно','отправь как есть','дословно','слово в слово'}:
+            item.text=item.raw_text;item.verbatim=True;item.composed_for=''
+        elif intent:
             if intent.error:
                 self.pending_messages.pop(session, None)
                 yield dict(type='delta', text=intent.error); return
-            item = PendingMessage(recipient=intent.recipient, text=intent.text)
+            item = PendingMessage(recipient=intent.recipient, text=intent.text, raw_text=intent.text,
+                verbatim=intent.verbatim,mode=intent.mode)
             previous = self.context.get(session)
             if key(item.recipient) in PRONOUNS:
                 item.recipient = previous.recipient if previous else ''
@@ -94,10 +105,9 @@ class TelegramMessages:
         elif item and item.status == 'awaiting_recipient':
             item.recipient = recipient_name(text)
             item.username = ''
-        elif item and item.status == 'awaiting_text':
-            # This is literal message content: never strip greetings or split
-            # conjunctions/commands inside a dictated message.
-            item.text = text.strip()
+        elif item and item.status in {'awaiting_text','awaiting_composition'}:
+            item.text,item.verbatim = message_body(text,follow_up=True)
+            item.raw_text=item.text;item.composed_for=''
         else: return
         self.pending_messages[session] = item
         if not item.recipient:
@@ -113,6 +123,22 @@ class TelegramMessages:
         trace('TELEGRAM', message_length=len(item.text), status='requested')
         drafted = False; send_attempted = False; query = None; keep_pending = False; cleaned = False
         try:
+            item.status = 'composing'
+            if item.composed_for != item.recipient:
+                try:
+                    composed=await self.composer.compose_message(item.raw_text or item.text,item.recipient,
+                        {'mode':item.mode},verbatim=item.verbatim,cancel=agent.cancel)
+                except CompositionError as exc:
+                    item.status='awaiting_composition';keep_pending=True
+                    yield dict(type='delta',text=str(exc));return
+                except asyncio.CancelledError:
+                    if agent.cancel.is_set():raise native.Stopped('Отменено. Сообщение не отправляла.') from None
+                    raise
+                native.check(agent.cancel)
+                if composed.needs_clarification:
+                    item.status='awaiting_composition';keep_pending=True
+                    yield dict(type='delta',text='Уточните, что именно написать получателю. Сообщение не подготовлено и не отправлено.');return
+                item.text=composed.text;item.composed_for=item.recipient
             item.status = 'finding_chat'
             yield dict(type='agent_plan', steps=['Подготовить сообщение в Telegram', 'Подтвердить и отправить'])
             yield dict(type='agent_step', index=0, status='running')

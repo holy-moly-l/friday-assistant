@@ -40,7 +40,19 @@ def cells(row, wanted):
     return result
 
 
+def title_parts(title):
+    # MainWindow::updateTitle: wrap_rtl(chat) + ' @ ' + wrap_rtl(account)
+    # + total unread count. Require Telegram's bidi marker; a literal ' @ '
+    # inside a contact name is not an account separator.
+    separators=list(re.finditer(r' @ (?=[\u200e\u200f])',title))
+    if not separators:return title,''
+    split=separators[-1]
+    account=re.sub(r'\s+\(\d+\)$','',title[split.end():])
+    return title[:split.start()],hashlib.sha256(account.encode('utf-8')).hexdigest()[:24]
+
+
 def chat_title(title):
+    title,_=title_parts(title)
     # Telegram puts its numeric title prefix BEFORE its bidi marker; a contact
     # whose actual name begins '(2)' remains intact after the marker.
     title = re.sub(r'^\(\d+\)\s*(?=[\u200e\u200f])', '', title)
@@ -216,7 +228,9 @@ class TelegramUI:
         if expected and key(title) != key(expected['title']):
             raise ValueError('Открыт другой чат. Отправка отменена.')
         composer = self.composer(); history = self.history()
-        stamp = dict(title=title, composer=identity(composer), history=identity(history))
+        stamp = dict(title=title, composer=identity(composer), history=identity(history), account=title_parts(fresh['title'])[1])
+        if expected and stamp['account']!=expected.get('account',''):
+            raise ValueError('Аккаунт Telegram изменился. Отправка отменена.')
         if expected and any(stamp[k] != expected[k] for k in ('composer', 'history')):
             raise ValueError('Чат или поле ввода изменились. Отправка отменена.')
         return stamp, composer, history

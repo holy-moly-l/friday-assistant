@@ -9,10 +9,10 @@
 Голосовое управление · Windows Automation · анализ экрана · локальный AI · Telegram Desktop
 
 <p>
-  <img src="https://img.shields.io/badge/VERSION-1.8.0-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Version 1.8.0" />
+  <img src="https://img.shields.io/badge/VERSION-1.8.1-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Version 1.8.1" />
   <img src="https://img.shields.io/badge/WINDOWS-10%20%2F%2011-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Windows 10 and 11" />
   <img src="https://img.shields.io/badge/AI-LOCAL--FIRST-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Local-first AI" />
-  <img src="https://img.shields.io/badge/TESTS-448%20%2B%2026-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="448 tests and 26 regression scenarios" />
+  <img src="https://img.shields.io/badge/TESTS-517-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="517 tests" />
 </p>
 
 [Возможности](#возможности) · [Как это работает](#как-это-работает) · [Установка](#быстрый-старт) · [Команды](COMMANDS.md) · [Документация](#документация)
@@ -56,7 +56,7 @@ Whisper Large v3 Turbo, активация по слову «Пятница», �
 
 ### ✈️ Telegram Desktop
 
-Поиск чата, подготовка черновика и отправка сообщения только после явного подтверждения пользователя.
+Локальная формулировка сообщения от вашего лица, проверка чата и отправка только после подтверждения итогового текста. Есть дословный режим.
 
 </td>
 </tr>
@@ -88,6 +88,8 @@ Qwen 3.5 через Ollama для диалога, планирования и vi
 Что написано в этом окне?
 Нажми кнопку «Продолжить»
 Напиши @username: буду через десять минут
+Напиши @username, чтобы он купил хлеб
+Напиши @username дословно: я буду в 12
 Пятница, стоп
 ```
 
@@ -124,6 +126,7 @@ Qwen 3.5 через Ollama для диалога, планирования и vi
 - записи микрофона не сохраняются в историю;
 - снимок экрана отправляется облачному провайдеру только в облачном vision-режиме;
 - Telegram не отправляет подготовленный текст без подтверждения;
+- Message Composer использует только локальную Qwen 3.5 4B, без автоматической отправки личных сообщений в облако;
 - потенциально необратимые действия проходят отдельную проверку.
 
 ## Стек
@@ -189,7 +192,9 @@ codex login status
 
 ## Проверки
 
-Версия 1.8 прошла **448 pytest-тестов**, **26 regression-сценариев** и реальные интеграционные проверки Windows capture, vision, Codex и packaged-приложения.
+Версия 1.8.1 прошла **517 pytest-тестов**, **19 реальных проверок формулировки Qwen**, проверку UI подтверждения и цепочку Telegram в собственном «Избранном»: черновик, отказ, стоп, подтверждённая отправка и проверка истории. Подробнее — в [docs/MESSAGES.md](docs/MESSAGES.md).
+
+Для версии 1.8.0 ранее выполнены 26 regression-сценариев и реальные интеграционные проверки Windows capture, vision, Codex и packaged-приложения.
 
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
@@ -206,6 +211,7 @@ node tests\codex-ui.cjs
 | Все голосовые и текстовые команды | **[COMMANDS.md](COMMANDS.md)** |
 | Windows Automation и Action Engine | **[docs/DESKTOP.md](docs/DESKTOP.md)** |
 | Codex, vision, изоляция и fallback | **[docs/CODEX.md](docs/CODEX.md)** |
+| Формулировка и отправка сообщений Telegram | **[docs/MESSAGES.md](docs/MESSAGES.md)** |
 | История версий | **[CHANGELOG.md](CHANGELOG.md)** |
 | Сторонние компоненты | **[THIRD_PARTY.md](THIRD_PARTY.md)** |
 

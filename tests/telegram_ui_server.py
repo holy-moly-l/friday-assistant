@@ -10,14 +10,20 @@ sys.path[:0] = [str(root/'backend'),str(root/'tests')]
 import app as friday
 from desktop_agent import DesktopAgent
 from telegram_messages import TelegramMessages
-from test_telegram_messages import FakeTelegram
+from test_telegram_messages import FakeTelegram, FakeComposer
+from message_composer import ComposedMessage
 import uvicorn
+
+class UIComposer(FakeComposer):
+    async def compose_message(self,raw_text,*args,**kwargs):
+        if raw_text=='пусть приедет сегодня в 12 часов':return ComposedMessage('Приезжай сегодня в 12 часов.')
+        return await super().compose_message(raw_text,*args,**kwargs)
 
 with tempfile.TemporaryDirectory(prefix='friday-telegram-ui-') as folder:
     friday.DB = Path(folder)/'history.db'; friday.init_db()
     friday.desktop = DesktopAgent(folder)
     fake = FakeTelegram()
-    friday.desktop.telegram = TelegramMessages(fake.call,fake.launch)
+    friday.desktop.telegram = TelegramMessages(fake.call,fake.launch,UIComposer())
     for service in ('llm','stt','tts'): friday.state[service] = 'ready'
     @friday.app.get('/api/test-telegram')
     def state(): return dict(sent=fake.sent,draft_length=len(fake.draft),pending=bool(friday.desktop.pending))
