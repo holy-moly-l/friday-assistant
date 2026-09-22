@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">Архитектура Friday</title>
+  <desc id="desc">Путь команды от голоса или текста до проверенного действия.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0a0b0e"/><stop offset="1" stop-color="#101116"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#525762"/></marker>
+  </defs>
+  <rect x="1" y="1" width="1198" height="428" rx="22" fill="url(#bg)" stroke="#2b2e36" stroke-width="2"/>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="46" y="54" fill="#8e929c" font-size="12" font-weight="600" letter-spacing="3">COMMAND PIPELINE</text>
+    <text x="46" y="82" fill="#f2f1ed" font-size="20" font-weight="650">От запроса до контролируемого действия</text>
+
+    <g fill="none" stroke="#525762" stroke-width="1.5" marker-end="url(#arrow)">
+      <path d="M220 164H288"/><path d="M496 164H564"/><path d="M772 164H840"/>
+      <path d="M944 211V252"/><path d="M840 320H772"/><path d="M564 320H496"/>
+    </g>
+
+    <g>
+      <rect x="44" y="118" width="176" height="92" rx="14" fill="#111318" stroke="#292c34"/>
+      <text x="64" y="148" fill="#6f737d" font-size="10" font-weight="600" letter-spacing="2">01 · INPUT</text>
+      <text x="64" y="181" fill="#eeede9" font-size="16" font-weight="600">Голос / текст</text>
+    </g>
+    <g>
+      <rect x="288" y="118" width="208" height="92" rx="14" fill="#111318" stroke="#292c34"/>
+      <text x="308" y="148" fill="#6f737d" font-size="10" font-weight="600" letter-spacing="2">02 · INTERFACE</text>
+      <text x="308" y="181" fill="#eeede9" font-size="16" font-weight="600">Electron + React</text>
+    </g>
+    <g>
+      <rect x="564" y="118" width="208" height="92" rx="14" fill="#111318" stroke="#292c34"/>
+      <text x="584" y="148" fill="#6f737d" font-size="10" font-weight="600" letter-spacing="2">03 · ROUTE</text>
+      <text x="584" y="181" fill="#eeede9" font-size="16" font-weight="600">FastAPI Router</text>
+    </g>
+    <g>
+      <rect x="840" y="118" width="316" height="92" rx="14" fill="#111318" stroke="#292c34"/>
+      <text x="860" y="148" fill="#6f737d" font-size="10" font-weight="600" letter-spacing="2">04 · PROVIDER</text>
+      <text x="860" y="178" fill="#eeede9" font-size="15" font-weight="600">Windows · Qwen · Codex · Telegram</text>
+    </g>
+    <g>
+      <rect x="772" y="274" width="384" height="92" rx="14" fill="#111318" stroke="#7667f5" stroke-opacity=".6"/>
+      <text x="792" y="304" fill="#8b7ff9" font-size="10" font-weight="600" letter-spacing="2">05 · VALIDATE</text>
+      <text x="792" y="337" fill="#eeede9" font-size="16" font-weight="600">Action Engine + правила безопасности</text>
+    </g>
+    <g>
+      <rect x="496" y="274" width="208" height="92" rx="14" fill="#111318" stroke="#292c34"/>
+      <text x="516" y="304" fill="#6f737d" font-size="10" font-weight="600" letter-spacing="2">06 · APPROVE</text>
+      <text x="516" y="337" fill="#eeede9" font-size="16" font-weight="600">Подтверждение</text>
+    </g>
+    <g>
+      <rect x="288" y="274" width="140" height="92" rx="14" fill="#15131e" stroke="#7667f5"/>
+      <text x="308" y="304" fill="#8b7ff9" font-size="10" font-weight="600" letter-spacing="2">07 · DONE</text>
+      <text x="308" y="337" fill="#f2f1ed" font-size="16" font-weight="700">Выполнить</text>
+    </g>
+  </g>
+</svg>
