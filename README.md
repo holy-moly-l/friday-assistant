@@ -1,112 +1,147 @@
 <div align="center">
 
-<img src="public/friday.svg" width="124" alt="Friday logo" />
+<img src="docs/assets/readme-hero.svg" width="100%" alt="Friday — персональный AI-ассистент для Windows" />
 
-# Пятница
+<br />
 
-### Персональный AI-ассистент для Windows
+### Персональный AI-ассистент, который умеет не только отвечать
 
-Голосовое управление · Windows automation · анализ экрана · локальный AI · Telegram Desktop
+Голосовое управление · Windows Automation · анализ экрана · локальный AI · Telegram Desktop
 
-![Version](https://img.shields.io/badge/version-1.8.0-6C63FF?style=flat-square)
-![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D4?style=flat-square&logo=windows11&logoColor=white)
-![Local first](https://img.shields.io/badge/AI-local--first-111827?style=flat-square)
+<p>
+  <img src="https://img.shields.io/badge/VERSION-1.8.0-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Version 1.8.0" />
+  <img src="https://img.shields.io/badge/WINDOWS-10%20%2F%2011-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Windows 10 and 11" />
+  <img src="https://img.shields.io/badge/AI-LOCAL--FIRST-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Local-first AI" />
+  <img src="https://img.shields.io/badge/TESTS-448%20%2B%2026-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="448 tests and 26 regression scenarios" />
+</p>
 
-[Возможности](#-возможности) · [Архитектура](#-архитектура) · [Запуск](#-быстрый-старт) · [Команды](COMMANDS.md) · [Документация](#-документация)
+[Возможности](#возможности) · [Как это работает](#как-это-работает) · [Установка](#быстрый-старт) · [Команды](COMMANDS.md) · [Документация](#документация)
 
 </div>
 
 ---
 
-**Пятница** — desktop-ассистент, который умеет не только отвечать в чате, но и выполнять действия на компьютере: запускать приложения, работать с окнами и мониторами, анализировать интерфейс, принимать голосовые команды и подготавливать сообщения в Telegram Desktop.
+**Пятница** — desktop-ассистент для Windows, который превращает обычную речь в контролируемые действия на компьютере. Он запускает приложения, управляет окнами и мониторами, работает с мультимедиа, анализирует интерфейс и подготавливает сообщения в Telegram Desktop.
 
-Простые действия выполняются обычным локальным кодом. Для свободных формулировок и vision используется **Qwen 3.5 через Ollama**, а **Codex** можно подключить опционально для сложных планов и анализа экрана.
+Простые команды выполняются локальными инструментами без обращения к модели. Свободные формулировки и vision обрабатывает **Qwen 3.5 через Ollama**; **Codex** можно подключить опционально для сложного планирования и анализа экрана.
 
-## ✨ Возможности
+## Возможности
 
-| | |
-| --- | --- |
-| **🎙 Голос**<br>Whisper Large v3 Turbo, активация по слову «Пятница», работа в свёрнутом окне | **🖥 Windows**<br>Приложения, окна, мониторы, громкость, мультимедиа, папки и системные действия |
-| **👁 Vision**<br>Анализ окна, выбранного монитора или всех дисплеев | **🧠 Local AI**<br>Qwen 3.5 через Ollama для диалога, планирования и изображений |
-| **✈️ Telegram Desktop**<br>Поиск чата, подготовка черновика и отправка только после подтверждения | **🔊 Озвучка**<br>Локальные Qwen3-TTS и Silero |
-| **⚡ Каталог команд**<br>90 действий и 1453 опубликованные формулировки | **🛡 Контроль действий**<br>Опасные клики, ввод и клавиши требуют подтверждения |
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### Примеры команд
+### 🎙 Голос
+
+Whisper Large v3 Turbo, активация по слову «Пятница», работа в свёрнутом окне и мгновенная остановка голосом.
+
+</td>
+<td width="50%" valign="top">
+
+### 🖥 Управление Windows
+
+Приложения, окна, мониторы, громкость, мультимедиа, папки и системные действия через единый Action Engine.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 👁 Анализ экрана
+
+Понимание активного окна, выбранного монитора или всех дисплеев с помощью локального Qwen или Codex vision.
+
+</td>
+<td width="50%" valign="top">
+
+### ✈️ Telegram Desktop
+
+Поиск чата, подготовка черновика и отправка сообщения только после явного подтверждения пользователя.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🧠 Local-first AI
+
+Qwen 3.5 через Ollama для диалога, планирования и vision. Локальная озвучка через Qwen3-TTS или Silero.
+
+</td>
+<td width="50%" valign="top">
+
+### ⚡ Каталог команд
+
+**90 действий** и **1 453 опубликованные формулировки**: от простого запуска Discord до цепочек с несколькими окнами.
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary><strong>Посмотреть примеры команд</strong></summary>
 
 ```text
 Пятница, открой Discord
-
 Сделай громкость 30 процентов
-
 Открой калькулятор и перенеси его на второй монитор
-
 Что написано в этом окне?
-
 Нажми кнопку «Продолжить»
-
 Напиши @username: буду через десять минут
-
 Пятница, стоп
 ```
 
-Полный список: **[COMMANDS.md](COMMANDS.md)**.
+Полный каталог находится в **[COMMANDS.md](COMMANDS.md)**.
 
-## 🧩 Архитектура
+</details>
 
-```mermaid
-flowchart LR
-    U["Голос / текст"] --> UI["Electron + React"]
-    UI --> API["FastAPI"]
-    API --> R{"Router"}
+## Как это работает
 
-    R --> W["Windows / UI Automation"]
-    R --> Q["Qwen 3.5 · Ollama"]
-    R --> C["Codex CLI · optional"]
-    R --> T["Telegram Desktop"]
+<div align="center">
 
-    W --> A["Action Engine"]
-    Q --> A
-    C --> A
-    T --> A
+<img src="docs/assets/readme-pipeline.svg" width="100%" alt="Архитектура Friday: от команды до проверенного действия" />
 
-    A --> V{"Confirmation?"}
-    V -->|safe| X["Execute"]
-    V -->|required| P["User approval"]
-    P --> X
-```
+</div>
 
-Модель не получает прямой неограниченный доступ к компьютеру. План проходит валидацию, а действия выполняются существующими Windows-инструментами. Для элементов интерфейса приоритет отдаётся **UI Automation**; vision используется, когда его недостаточно или анализ экрана запрошен напрямую.
-
-## 🧠 Режимы AI
-
-| Режим | Поведение |
-| --- | --- |
-| **Local only** | Windows-инструменты и Qwen работают локально; облачные AI-запросы отключены |
-| **Hybrid** | Простые действия остаются локальными; Codex может использоваться для сложных планов |
-| **Codex vision** | Анализ изображения выполняется через Codex, исполнение действий остаётся под контролем приложения |
-
-По умолчанию vision использует **Qwen 3.5 4B**. Codex подключается через официальный CLI и существующий вход ChatGPT; API key приложению не требуется.
+Модель не получает прямой неограниченный доступ к компьютеру. План проходит проверку, а действия выполняются существующими Windows-инструментами. Для элементов интерфейса приоритет отдаётся **UI Automation**; vision используется, когда UIA недостаточно или пользователь напрямую просит проанализировать экран.
 
 > [!IMPORTANT]
-> Если для vision выбран Codex, снимок экрана отправляется выбранному облачному провайдеру. В **Local only** этого не происходит.
+> Опасные клики, ввод текста, нажатия клавиш и отправка сообщений требуют подтверждения. `Esc`, кнопка остановки и команда **«Пятница, стоп»** отменяют активную цепочку.
 
-## 🔒 Основные принципы
+## Режимы AI
 
-- локальный сервис доступен только на `127.0.0.1:17835`;
+| Режим | Что происходит |
+|:---|:---|
+| **Local only** | Windows-инструменты и Qwen работают локально; облачные AI-запросы отключены |
+| **Hybrid** | Простые действия остаются локальными; Codex доступен для сложного планирования |
+| **Codex vision** | Снимок экрана анализирует Codex, но исполнение по-прежнему контролирует приложение |
+
+По умолчанию vision использует **Qwen 3.5 4B**. Codex подключается через официальный CLI и существующий вход ChatGPT — API key приложению не требуется.
+
+## Приватность и контроль
+
+- backend принимает соединения только на `127.0.0.1:17835`;
 - записи микрофона не сохраняются в историю;
-- потенциально необратимые действия требуют подтверждения;
-- Telegram-сценарий не отправляет подготовленный текст без подтверждения;
-- `Esc`, кнопка остановки и команда **«Пятница, стоп»** отменяют активную цепочку.
+- снимок экрана отправляется облачному провайдеру только в облачном vision-режиме;
+- Telegram не отправляет подготовленный текст без подтверждения;
+- потенциально необратимые действия проходят отдельную проверку.
 
-## 🛠 Стек
+## Стек
 
-| Desktop | Backend | AI |
-| --- | --- | --- |
+<div align="center">
+
+<img src="https://skillicons.dev/icons?i=python,ts,react,electron,vite,fastapi,sqlite,pytorch,git,github&perline=10" alt="Python, TypeScript, React, Electron, Vite, FastAPI, SQLite, PyTorch, Git и GitHub" />
+
+</div>
+
+| Desktop | Backend | AI и голос |
+|:---|:---|:---|
 | Electron 44 · React 19 · TypeScript · Vite | Python 3.11 · FastAPI · SQLite · UI Automation | Ollama · Qwen 3.5 · Faster Whisper · Vosk · Qwen3-TTS · Silero · Codex CLI |
 
-## 🚀 Быстрый старт
+## Быстрый старт
 
-**Требования:** Windows, Node.js + npm, Python 3.11 и Ollama. NVIDIA GPU желательна для ускорения локальных моделей.
+> [!NOTE]
+> Нужны Windows 10/11, Node.js + npm, Python 3.11 и Ollama. NVIDIA GPU желательна для ускорения локальных моделей.
 
 ```powershell
 git clone https://github.com/holy-moly-l/friday-assistant.git
@@ -128,19 +163,19 @@ npm run build
 npm start
 ```
 
-Собрать Windows-приложение:
+<details>
+<summary><strong>Собрать самостоятельное Windows-приложение</strong></summary>
 
 ```powershell
 npm run package
 ```
 
-Результат: `release/Friday-win32-x64/Friday.exe`.
+Готовая сборка появится в `release/Friday-win32-x64/Friday.exe`.
 
-Локальные модели, Python-окружения, история разговоров и данные авторизации в Git не публикуются в репозитории.
+</details>
 
-## ☁️ Codex
-
-Для опционального режима Codex:
+<details>
+<summary><strong>Подключить опциональный Codex</strong></summary>
 
 ```powershell
 npm install -g @openai/codex@0.154.0
@@ -148,9 +183,13 @@ codex login
 codex login status
 ```
 
-Подробности об изоляции, fallback, таймаутах и vision: **[docs/CODEX.md](docs/CODEX.md)**.
+Изоляция, fallback, таймауты и vision подробно описаны в **[docs/CODEX.md](docs/CODEX.md)**.
 
-## 🧪 Проверки
+</details>
+
+## Проверки
+
+Версия 1.8 прошла **448 pytest-тестов**, **26 regression-сценариев** и реальные интеграционные проверки Windows capture, vision, Codex и packaged-приложения.
 
 ```powershell
 .venv\Scripts\python.exe -m pytest -q
@@ -160,24 +199,24 @@ node tests\desktop-native.cjs
 node tests\codex-ui.cjs
 ```
 
-Для версии 1.8 пройдены **448 pytest-тестов и 26 regression-сценариев**, а также реальные проверки Windows capture, vision, Codex и packaged-приложения.
+## Документация
 
-## 📚 Документация
-
-| Раздел | Ссылка |
-| --- | --- |
-| Все команды | [COMMANDS.md](COMMANDS.md) |
-| Управление Windows и Action Engine | [docs/DESKTOP.md](docs/DESKTOP.md) |
-| Codex, vision и fallback | [docs/CODEX.md](docs/CODEX.md) |
-| История изменений | [CHANGELOG.md](CHANGELOG.md) |
-| Сторонние компоненты | [THIRD_PARTY.md](THIRD_PARTY.md) |
+| Раздел | Документ |
+|:---|:---|
+| Все голосовые и текстовые команды | **[COMMANDS.md](COMMANDS.md)** |
+| Windows Automation и Action Engine | **[docs/DESKTOP.md](docs/DESKTOP.md)** |
+| Codex, vision, изоляция и fallback | **[docs/CODEX.md](docs/CODEX.md)** |
+| История версий | **[CHANGELOG.md](CHANGELOG.md)** |
+| Сторонние компоненты | **[THIRD_PARTY.md](THIRD_PARTY.md)** |
 
 ---
 
 <div align="center">
 
-**Friday · Personal Intelligence**
+<img src="public/friday.svg" width="52" alt="Friday logo" />
 
-*Ассистент, который умеет отвечать, видеть и действовать.*
+**FRIDAY · PERSONAL INTELLIGENCE**
+
+<sub>Ассистент, который умеет отвечать, видеть и действовать.</sub>
 
 </div>
