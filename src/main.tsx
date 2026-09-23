@@ -16,13 +16,15 @@ import { splitSpeech } from './speech';
 import { VoiceSettings, PREVIEW_TEXT } from './VoiceSettings';
 import { DesktopActivity, DesktopSettings, type Activity } from './DesktopControls';
 import { RecognitionTest } from './RecognitionTest';
+import { Camera } from 'lucide-react';
+import { CameraHands } from './CameraHands';
 
 type Message = { id: string; role: 'user' | 'assistant'; content: string; action?: string; elapsed?: number };
 type Session = { id: string; title: string; created: string; count?: number };
 type Note = { id: string; content: string; created: string };
 type Health = {services: Record<string, string>; model: string; stt_model?:string; stt_device?: string; expressive_voice?: string};
 type Phase = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'synthesizing' | 'speaking';
-type Tab = 'assistant' | 'history' | 'commands' | 'notes' | 'settings';
+type Tab = 'assistant' | 'history' | 'commands' | 'notes' | 'settings' | 'camera';
 type Prefs = { voice: boolean; speaker: string; speed: number; device: string; autoStop: boolean; voiceVersion?: number; theme: ThemeId; wake: boolean; motion: MotionMode };
 
 const fragment = new URLSearchParams(location.hash.slice(1));
@@ -40,7 +42,7 @@ async function api(path: string, options: RequestInit = {}) {
   return response;
 }
 const json = (path: string, options?: RequestInit) => api(path, options).then(r => r.json());
-const titles: Record<Tab, string> = { assistant: 'Помощник', history: 'История разговоров', commands: 'Быстрые команды', notes: 'Мои заметки', settings: 'Настройки' };
+const titles: Record<Tab, string> = { assistant: 'Помощник', history: 'История разговоров', commands: 'Быстрые команды', notes: 'Мои заметки', settings: 'Настройки', camera:'Камера и жесты' };
 const phaseText: Record<Phase, string> = { idle: 'Я рядом и готова помочь', listening: 'Слушаю вас…', transcribing: 'Распознаю вашу речь…', thinking: 'Думаю над ответом…', synthesizing: 'Готовлю голосовой ответ…', speaking: 'Пятница говорит…' };
 
 
@@ -242,7 +244,7 @@ function App() {
       <a className="brand" href="#" onClick={e=>{e.preventDefault();setTab('assistant');}}><span className="brand-mark"><img src="/friday.svg" alt="" width="40" height="40"/></span><span>пятница<span className="brand-dot">.</span></span></a>
       <button className="new-chat" onClick={newChat} disabled={pending||phase==='listening'}><Plus size={17}/>Новый разговор<span>↗</span></button>
       
-      <nav>{([{id:'assistant',icon:AudioLines},{id:'history',icon:History},{id:'commands',icon:Command},{id:'notes',icon:StickyNote}] as const).map(item=><button key={item.id} aria-current={tab===item.id?'page':undefined} className={'nav-item '+(tab===item.id?'selected':'')} onClick={()=>{setTab(item.id);setSearch('');}}><item.icon size={18}/><span>{item.id==='history'?'История':item.id==='commands'?'Команды':titles[item.id]}</span>{tab===item.id&&<span className="nav-active"/>}</button>)}</nav>
+      <nav>{([{id:'assistant',icon:AudioLines},{id:'camera',icon:Camera},{id:'history',icon:History},{id:'commands',icon:Command},{id:'notes',icon:StickyNote}] as const).map(item=><button key={item.id} aria-current={tab===item.id?'page':undefined} className={'nav-item '+(tab===item.id?'selected':'')} onClick={()=>{setTab(item.id);setSearch('');}}><item.icon size={18}/><span>{item.id==='history'?'История':item.id==='commands'?'Команды':titles[item.id]}</span>{tab===item.id&&<span className="nav-active"/>}</button>)}</nav>
       <div className="recent-heading"><span className="nav-label">НЕДАВНИЕ РАЗГОВОРЫ</span><History size={13}/></div>
       <div className="recent-list">{sessions.filter(s=>s.count).slice(0,4).map(s=><button key={s.id} onClick={()=>openSession(s)} disabled={pending||phase==='listening'}><MessageSquare size={14}/><span>{s.title}</span></button>)}{!sessions.some(s=>s.count)&&<p>Пока нет разговоров</p>}</div>
       <div className="sidebar-bottom"><button aria-current={tab==='settings'?'page':undefined} className={'nav-item '+(tab==='settings'?'selected':'')} onClick={()=>setTab('settings')}><Settings2 size={18}/><span>Настройки</span></button>
@@ -276,6 +278,7 @@ function App() {
           
         </>:<>
           <div className="page-heading"><h1>{titles[tab]}</h1>{tab==='commands'&&<p>Найдите действие и нажмите «Выполнить».</p>}</div>
+          {tab==='camera'&&<CameraHands api={json}/>}
           {error&&<div className="error-banner" role="alert"><CircleHelp size={17}/><span>{error}</span><button aria-label="Закрыть ошибку" onClick={()=>setError('')}><X size={15}/></button></div>}
           {tab==='history'&&<><div className="search-field"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Найти разговор…" aria-label="Поиск разговоров"/></div><div className="history-list">{sessions.filter(s=>s.count&&s.title.toLowerCase().includes(search.toLowerCase())).map(s=><div className="history-row" key={s.id}><button className="history-open" onClick={()=>openSession(s)} disabled={pending||phase==='listening'}><span className="history-icon"><MessageSquare size={19}/></span><div><strong>{s.title}</strong><span>{new Date(s.created).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})} · {s.count} сообщ.</span></div><ArrowUpRight size={18}/></button>{deleteId===s.id?<div className="delete-confirm"><span>Удалить разговор?</span><button onClick={()=>removeSession(s.id)}>Удалить</button><button onClick={()=>setDeleteId('')} aria-label="Отмена"><X size={15}/></button></div>:<button className="icon-button" aria-label="Удалить разговор" disabled={pending||phase==='listening'} onClick={()=>setDeleteId(s.id)}><Trash2 size={16}/></button>}</div>)}</div>{!sessions.some(s=>s.count&&s.title.toLowerCase().includes(search.toLowerCase()))&&<div className="empty-state"><History size={35}/><h2>{search?'Ничего не найдено':'Пока нет разговоров'}</h2><p>{search?'Попробуйте другое название.':'Начните разговор — он автоматически сохранится здесь.'}</p><button className="primary-button" onClick={newChat}><Plus size={16}/>Новый разговор</button></div>}</>}
           {tab==='commands'&&<CommandLibrary disabled={pending||phase==='listening'} onRun={send} onInsert={text=>{setInput(text);setTab('assistant');setTimeout(()=>inputEl.current?.focus(),50);}}/>}
@@ -292,4 +295,3 @@ function App() {
 }
 
 createRoot(document.getElementById('root')!).render(<App/>);
-

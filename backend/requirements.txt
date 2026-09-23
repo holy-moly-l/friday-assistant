@@ -14,3 +14,6 @@ websockets==17.1
 uiautomation==2.0.29
 pymorphy3==2.0.6
 jsonschema==4.26.0
+winrt-Windows.Media.Control==3.2.1
+winrt-Windows.Foundation==3.2.1
+winrt-Windows.Foundation.Collections==3.2.1

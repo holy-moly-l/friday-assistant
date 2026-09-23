@@ -45,11 +45,16 @@ else {
       }
       session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
         const trusted = contents.getURL().startsWith(origin + '/');
-        callback(trusted && permission === 'media' && (!details.mediaTypes || details.mediaTypes.every(t => t === 'audio')));
+        callback(trusted && permission === 'media' && (!details.mediaTypes || details.mediaTypes.every(t => t === 'audio' || t === 'video')));
       });
-      session.defaultSession.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => permission === 'media' && requestingOrigin === origin && details.mediaType !== 'video');
+      session.defaultSession.setPermissionCheckHandler((contents, permission, requestingOrigin) => permission === 'media' && requestingOrigin === origin && contents?.getURL().startsWith(origin + '/'));
       window = new BrowserWindow({ width: 1440, height: 960, minWidth: 1050, minHeight: 720, icon: path.join(root, 'public', 'friday.ico'), backgroundColor: '#0c121c', title: 'Пятница', autoHideMenuBar: true, show: false, webPreferences: {nodeIntegration: false, contextIsolation: true, sandbox: true, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required'} });
       window.setMenu(null);
+      // Voice keeps backgroundThrottling disabled, so document.hidden is not a
+      // reliable minimize signal. Stop only the camera; voice remains available.
+      const suspendCamera = () => window.webContents.executeJavaScript("window.dispatchEvent(new Event('friday-camera-suspend'))").catch(() => {});
+      window.on('minimize', suspendCamera);
+      window.on('hide', suspendCamera);
       window.webContents.setWindowOpenHandler(() => ({action: 'deny'}));
       window.webContents.on('will-navigate', (event, url) => { if (!url.startsWith(origin + '/')) event.preventDefault(); });
       for (let i = 0; i < 100; i++) {
@@ -61,6 +66,9 @@ else {
         if (i === 99) throw new Error('Сервис не запустился. Подробности: data/backend.log');
         await delay(300);
       }
+      // The local server's HTML can otherwise outlive a package upgrade in
+      // Chromium's disk cache. Keep preferences/login storage; clear HTTP cache only.
+      await session.defaultSession.clearCache();
       await window.loadURL(origin + '/#token=' + token);
       window.show();
     } catch (error) {

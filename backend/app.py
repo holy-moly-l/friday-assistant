@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
 import io
 import json
@@ -26,6 +26,9 @@ from lifecycle import follow_parent
 from wake_word import WakeService
 from desktop_agent import DesktopAgent, deterministic, vision_request, stop_request
 from desktop_trace import trace
+from gesture_control import GestureControl
+import gesture_media
+import desktop_native
 from recognition import MODEL_FOLDER as STT_FOLDER, MODEL_LABEL as STT_LABEL, transcribe as recognize_russian
 follow_parent(os.environ.get('FRIDAY_DESKTOP_PID'))
 
@@ -58,6 +61,12 @@ log = logging.getLogger('friday')
 expressive = ExpressiveVoice(ROOT)
 wake_service = WakeService(MODELS)
 desktop = DesktopAgent(DATA, before_model=expressive.close)
+gestures = GestureControl(busy=lambda: chat_lock.locked() or desktop.running)
+
+
+def stop_controls():
+    gestures.stop()
+    desktop.stop()
 
 
 def connect():
@@ -153,9 +162,12 @@ async def lifespan(app):
     for fn in (load_voice, load_whisper, warm_llm):
         pool.submit(fn)
     codex_health=asyncio.create_task(desktop.ai.codex.health_check()) if desktop.ai.mode!='local' else None
+    gesture_watchdog=asyncio.create_task(gestures.watchdog())
     yield
+    gesture_watchdog.cancel()
+    with suppress(asyncio.CancelledError):await gesture_watchdog
     if codex_health and not codex_health.done():codex_health.cancel()
-    desktop.stop()
+    stop_controls()
     desktop.foreground.closed.set()
     expressive.close()
     pool.shutdown(wait=False)
@@ -178,13 +190,15 @@ async def local_only(request: Request, call_next):
     response = await call_next(request)
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Referrer-Policy'] = 'no-referrer'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'"
+    if request.url.path in ('/', '/index.html') or request.url.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'"
     return response
 
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.8.1', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.9.0', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')
@@ -298,7 +312,7 @@ async def chat(body: ChatBody, request: Request):
     if not text:
         raise HTTPException(422, 'Введите сообщение')
     if stop_request(text) or desktop.telegram.cancelling(text,body.session_id):
-        desktop.stop()
+        stop_controls()
         return StreamingResponse(iter([json.dumps({'type':'delta','text':'Остановлено.'},ensure_ascii=False)+'\n']),media_type='application/x-ndjson')
     if chat_lock.locked():
         raise HTTPException(409, 'Дождитесь текущего ответа')
@@ -310,6 +324,7 @@ async def chat(body: ChatBody, request: Request):
     if not messaging and not command and deterministic(text) is None and state['llm'] != 'ready' and not vision_request(text) and not desktop.ai.cloud_for(task=text):
         raise HTTPException(503, 'Модель ещё загружается. Подождите немного или проверьте настройки.')
     await chat_lock.acquire()
+    gestures.stop()
     try:
         save_message(body.session_id, 'user', text)
         with connect() as db:
@@ -521,7 +536,7 @@ async def desktop_download(body:DesktopSettingsBody):
 
 @app.post('/api/desktop/stop')
 async def desktop_stop():
-    desktop.stop();return {'ok':True}
+    stop_controls();return {'ok':True}
 
 @app.post('/api/desktop/approve')
 async def desktop_approve(body:ApprovalBody):
@@ -529,7 +544,49 @@ async def desktop_approve(body:ApprovalBody):
     except CommandError as exc:raise HTTPException(409,str(exc))
     return {'ok':True}
 
-wake_service.mount(app,TOKEN,PORT,transcribe_wake_pcm,lambda:state['stt']=='ready',desktop.stop,lambda:bool(desktop.pending))
+class GestureArmBody(BaseModel):
+    mode: Literal['windows','media']
+    hwnd: int = 0
+    media: str = Field(default='',max_length=512)
+
+class GestureTokenBody(BaseModel):
+    token: str = Field(min_length=1,max_length=100)
+
+class GestureActionBody(GestureTokenBody):
+    sequence: int = Field(ge=0)
+    kind: Literal['drag_start','drag_move','release','maximize','monitor_left','monitor_right','play_pause','seek_forward','seek_backward']
+    x: float = Field(default=.5,ge=0,le=1,allow_inf_nan=False)
+    y: float = Field(default=.5,ge=0,le=1,allow_inf_nan=False)
+
+@app.get('/api/gestures/targets')
+async def gesture_targets():
+    try:media=await gesture_media.sessions();media_error=''
+    except CommandError as exc:media=[];media_error=str(exc)
+    return dict(windows=desktop_native.windows(),monitors=desktop_native.monitors(),media=media,media_error=media_error)
+
+@app.get('/api/gestures/status')
+async def gesture_status():return gestures.status()
+
+@app.post('/api/gestures/arm')
+async def gesture_arm(body:GestureArmBody):
+    try:return await gestures.arm(**body.model_dump())
+    except CommandError as exc:raise HTTPException(409,str(exc))
+
+@app.post('/api/gestures/heartbeat')
+async def gesture_heartbeat(body:GestureTokenBody):
+    try:return gestures.heartbeat(body.token)
+    except CommandError as exc:raise HTTPException(409,str(exc))
+
+@app.post('/api/gestures/action')
+async def gesture_action(body:GestureActionBody):
+    try:return await gestures.action(**body.model_dump())
+    except (CommandError,TimeoutError) as exc:raise HTTPException(409,str(exc) or 'Плеер не ответил вовремя.')
+
+@app.post('/api/gestures/stop')
+async def gesture_stop():
+    gestures.stop();return {'ok':True}
+
+wake_service.mount(app,TOKEN,PORT,transcribe_wake_pcm,lambda:state['stt']=='ready',stop_controls,lambda:bool(desktop.pending))
 
 if (ROOT / 'dist').exists():
     app.mount('/', StaticFiles(directory=str(ROOT / 'dist'), html=True), name='frontend')

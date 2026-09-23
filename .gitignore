@@ -21,3 +21,4 @@ test-results/
 *.mp3
 *.mp4
 *.partial
+public/hand-tracking/

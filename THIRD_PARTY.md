@@ -10,6 +10,8 @@
 | Faster Qwen3-TTS 0.2.6 | https://github.com/andimarafioti/faster-qwen3-tts | MIT; текст в licenses/Faster-Qwen3-TTS-LICENSE.txt |
 | Pycaw | https://github.com/AndreMiras/pycaw | MIT |
 | Pillow | https://python-pillow.org | HPND |
+| MediaPipe Tasks Vision 1.0.1 / Hand Landmarker | https://github.com/google-ai-edge/mediapipe | Apache-2.0; runtime и модель загружаются при сборке |
+| PyWinRT 3.2.1 (Windows.Media.Control / Foundation) | https://github.com/pywinrt/pywinrt | MIT |
 | pymorphy3 2.0.6 | https://github.com/no-plagiarism/pymorphy3 | MIT |
 | pymorphy3-dicts-ru / dawg2-python | https://github.com/no-plagiarism/pymorphy3-dicts | Лицензии установленных пакетов: MIT; данные словаря основаны на OpenCorpora |
 | Whisper Small | https://huggingface.co/Systran/faster-whisper-small | MIT |

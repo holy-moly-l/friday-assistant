@@ -1,17 +1,20 @@
 {
   "name": "friday-assistant",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "private": true,
   "description": "Пятница — персональный голосовой помощник",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "predev": "node scripts/prepare_hands.cjs",
+    "build": "node scripts/prepare_hands.cjs && tsc -b && vite build",
+    "prepare:hands": "node scripts/prepare_hands.cjs",
     "start": "electron .",
     "package": "npm run build && node scripts/pack.cjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",
+    "@mediapipe/tasks-vision": "1.0.1",
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
