@@ -47,7 +47,7 @@ const {chromium,expect}=require('@playwright/test');const {spawn}=require('node:
     await new Promise(r=>setTimeout(r,1050));
     await api('action',{token,sequence:++sequence,kind:'play_pause'});
     expect(await page.locator('audio').evaluate(a=>a.paused)).toBe(false);
-    await api('stop',{});
+    await api('stop',{token});
     console.log('REAL WINDOWS MEDIA PASS: own Edge session, pause/play, seek +5/-5 seconds, verified state');
   }finally{clearInterval(beat);}
  }catch(e){console.error(logs);throw e;}finally{if(browser)await browser.close();server.kill();}

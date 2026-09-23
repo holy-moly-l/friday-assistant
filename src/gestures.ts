@@ -50,15 +50,16 @@ export class GestureRecognizer {
     this.last=now;
     if(state!==this.previous){this.since=now;this.fired=false;this.swipe=null;this.previous=state;}
     if(this.dragging && state!=='pinch'){this.dragging=false;events.push({kind:'release'});}
+    // Stopping must also work before the initial open-palm gate and after hand loss.
+    if(state==='fist'){
+      this.hint='Удерживайте кулак — остановить управление';this.progress=Math.min(1,(now-this.since)/1000);
+      if(this.progress===1&&!this.fired){this.fired=true;events.push({kind:'stop'});}
+      return events;
+    }
     // First show a relaxed/open hand. A held pinch on activation or reacquisition cannot grab.
     if(this.needsRelease){
       this.hint='Раскройте ладонь, чтобы начать';
       if((state==='palm'||state==='neutral') && now-this.since>=250){this.needsRelease=false;this.since=now;}
-      return events;
-    }
-    if(state==='fist'){
-      this.hint='Удерживайте кулак — остановить управление';this.progress=Math.min(1,(now-this.since)/1000);
-      if(this.progress===1&&!this.fired){this.fired=true;events.push({kind:'stop'});}
       return events;
     }
     if(now<this.cooldown){this.hint='Отпустите жест';return events;}

@@ -49,6 +49,10 @@ class GestureControl:
         if self.session and (time.monotonic()-self.session['seen']>1.8 or self.busy()):self.stop()
         return dict(armed=bool(self.session), dragging=bool(self.session and self.session['drag']))
 
+    def stop_session(self, token):
+        """A late UI cleanup must not cancel a newer session. Voice stop stays global."""
+        if self.session and secrets.compare_digest(self.session['token'],token):self.stop()
+
     async def watchdog(self):
         try:
             while True:

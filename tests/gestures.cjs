@@ -13,6 +13,10 @@ function hand(type='palm',x=0,id='Right'){
 for(const state of ['palm','fist','victory','pinch'])assert.equal(pose(hand(state)),state);
 function sample(r,state,start,duration,x=0){let events=[];for(let t=start;t<start+duration;t+=50)events.push(...r.update([hand(state,x)],t));return events;}
 function ready(mode='windows'){const r=new GestureRecognizer(mode);sample(r,'palm',100,500);return r;}
+for(const mode of ['windows','media']){
+ const r=new GestureRecognizer(mode);assert.equal(sample(r,'fist',100,1400).filter(x=>x.kind==='stop').length,1,'stop before initial palm');
+ r.update([],1600);assert.equal(sample(r,'fist',1700,1400).filter(x=>x.kind==='stop').length,1,'stop after hand reacquisition');
+}
 {
  const r=new GestureRecognizer();assert.deepEqual(sample(r,'pinch',100,1500),[],'held pinch on activation must not grab');
 }

@@ -28,6 +28,26 @@ def test_explicit_target_and_stale_token(engine):
     with pytest.raises(CommandError):run(engine.action(token,1,'maximize'))
     assert not engine.status()['armed']
 
+def test_late_stop_cannot_cancel_new_session(engine):
+    old=run(engine.arm('windows',123))['token']
+    new=run(engine.arm('windows',123))['token']
+    engine.stop_session(old)
+    assert engine.heartbeat(new)['armed']
+    engine.stop_session(new)
+    assert not engine.status()['armed']
+
+def test_wrong_stop_token_cannot_cancel_pending_arm(engine,monkeypatch):
+    async def sessions():
+        await asyncio.sleep(.02);return [dict(id='player',ambiguous=False)]
+    monkeypatch.setattr(media,'sessions',sessions)
+    async def task():
+        pending=asyncio.create_task(engine.arm('media',media='player'))
+        await asyncio.sleep(.01);engine.stop_session('old-session')
+        new=(await pending)['token']
+        assert engine.heartbeat(new)['armed']
+        engine.stop_session(new)
+    run(task())
+
 def test_lease_expiry(engine):
     token=run(engine.arm('windows',123))['token'];engine.session['seen']-=2
     with pytest.raises(CommandError):engine.heartbeat(token)

@@ -39,12 +39,31 @@ const fs=require('node:fs');const path=require('node:path');
   await page.getByLabel('Окно для жестов',{exact:true}).selectOption(String(runtime.hwnd));
   await page.getByRole('button',{name:'Включить управление',exact:true}).click();
   await expect(page.getByRole('button',{name:'Остановить управление',exact:true})).toBeVisible();
+  // A delayed stop belonging to the previous session must not disarm the new one.
+  let stopRoute,stopSeen;const stopping=new Promise(resolve=>stopSeen=resolve);
+  await page.route('**/api/gestures/stop',route=>{stopRoute=route;stopSeen();});
   await page.keyboard.press('Escape');
+  await stopping;
   await expect(page.getByRole('button',{name:'Включить управление',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Включить управление',exact:true}).click();
   await expect(page.getByRole('button',{name:'Остановить управление',exact:true})).toBeVisible();
+  const stopArrived=page.waitForResponse(r=>r.url().endsWith('/api/gestures/stop'));
+  await stopRoute.continue();await stopArrived;await page.unroute('**/api/gestures/stop');
+  const backendArmed=()=>page.evaluate(async()=> (await (await fetch('/api/gestures/status',{headers:{'X-Friday-Token':sessionStorage.getItem('friday-token')}})).json()).armed);
+  expect(await backendArmed()).toBe(true);
   await page.evaluate(async()=>fetch('/api/desktop/stop',{method:'POST',headers:{'X-Friday-Token':sessionStorage.getItem('friday-token')}}));
   await expect(page.getByRole('button',{name:'Включить управление',exact:true})).toBeVisible();
+  // Cancel while the successful arm response is still in flight. It must never
+  // re-enable the UI, and its returned session must be cleaned up precisely.
+  let finishArm,armSeen;const arming=new Promise(resolve=>armSeen=resolve);
+  await page.route('**/api/gestures/arm',async route=>{const response=await route.fetch();finishArm=()=>route.fulfill({response});armSeen();});
+  await page.getByRole('button',{name:'Включить управление',exact:true}).click();await arming;
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button',{name:'Подключаю…',exact:true})).toBeDisabled();
+  const cleanup=page.waitForResponse(r=>r.url().endsWith('/api/gestures/stop'));
+  await finishArm();await cleanup;await page.unroute('**/api/gestures/arm');
+  await expect(page.getByRole('button',{name:'Включить управление',exact:true})).toBeEnabled();
+  expect(await backendArmed()).toBe(false);
   await page.getByRole('button',{name:'Помощник',exact:true}).click();
   expect(await page.evaluate(()=>window.testStream.getTracks().every(t=>t.readyState==='ended'))).toBe(true);
   await page.getByRole('button',{name:'Камера и жесты',exact:true}).click();
@@ -52,6 +71,6 @@ const fs=require('node:fs');const path=require('node:path');
   await page.getByRole('button',{name:'Включить камеру',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('Доступ к камере запрещён');
   expect(errors).toEqual([]);expect(external).toEqual([]);
-  console.log('CAMERA UI PASS: local worker/WASM, real model detects two hands, no external requests, arm, Esc, voice-stop endpoint, camera cleanup, denied permission');
+  console.log('CAMERA UI PASS: local worker/WASM, two hands, no external requests, arm, late stop isolated, cancelled arm cleanup, Esc, voice stop, camera cleanup, denied permission');
  }catch(e){console.error(logs);throw e;}finally{if(browser)await browser.close();server.kill();}
 })().catch(e=>{console.error(e);process.exitCode=1});

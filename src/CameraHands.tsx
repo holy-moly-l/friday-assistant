@@ -26,7 +26,7 @@ export function CameraHands({api}:{api:Api}){
   const timer=useRef<ReturnType<typeof setTimeout>|null>(null),modelTimeout=useRef<ReturnType<typeof setTimeout>|null>(null);
   const session=useRef(''),sequence=useRef(0),inFlight=useRef(false),releasePending=useRef(false);
   const tracker=useRef(new GestureRecognizer()),showOverlay=useRef(overlay);
-  const mounted=useRef(true),armGeneration=useRef(0);showOverlay.current=overlay;
+  const mounted=useRef(true),armGeneration=useRef(0),armBusy=useRef(false);showOverlay.current=overlay;
 
   async function refreshDevices(){const all=await navigator.mediaDevices.enumerateDevices();if(mounted.current)setDevices(all.filter(d=>d.kind==='videoinput'));}
   async function refreshTargets(){
@@ -34,9 +34,10 @@ export function CameraHands({api}:{api:Api}){
     catch(e){if(mounted.current)setError((e as Error).message);}
   }
   function disarm(message='Управление остановлено'){
+    const token=session.current;
     armGeneration.current++;session.current='';releasePending.current=false;tracker.current.reset();
-    if(mounted.current){setArmed(false);setArming(false);setLastAction(message);}
-    void api('/gestures/stop',post()).catch(()=>{});
+    if(mounted.current){setArmed(false);setLastAction(message);}
+    if(token)void api('/gestures/stop',{...post({token}),signal:AbortSignal.timeout(2500)}).catch(()=>{});
   }
   function shutdown(){
     generation.current++;disarm();worker.current?.terminate();worker.current=null;
@@ -112,13 +113,15 @@ export function CameraHands({api}:{api:Api}){
     }catch(e){if(gen===generation.current){shutdown();setError(cameraError(e));}}
   }
   async function arm(){
+    if(armBusy.current)return;
+    armBusy.current=true;
     const gen=++armGeneration.current;setArming(true);setError('');
     try{
-      const response=await api('/gestures/arm',post({mode,hwnd,media:mediaId}));
-      if(gen!==armGeneration.current || !mounted.current){void api('/gestures/stop',post()).catch(()=>{});return;}
+      const response=await api('/gestures/arm',{...post({mode,hwnd,media:mediaId}),signal:AbortSignal.timeout(5500)});
+      if(gen!==armGeneration.current || !mounted.current){void api('/gestures/stop',{...post({token:response.token}),signal:AbortSignal.timeout(2500)}).catch(()=>{});return;}
       tracker.current=new GestureRecognizer(mode,leading);session.current=response.token;sequence.current=0;setArmed(true);setLastAction('Управление включено');
-    }catch(e){if(gen===armGeneration.current)setError((e as Error).message);}
-    finally{if(gen===armGeneration.current)setArming(false);}
+    }catch(e){if(gen===armGeneration.current)setError((e as Error).name==='TimeoutError'?'Windows не ответила вовремя. Попробуйте включить управление снова.':(e as Error).message);}
+    finally{armBusy.current=false;if(mounted.current)setArming(false);}
   }
   useEffect(()=>{
     mounted.current=true;void refreshDevices().catch(()=>{});void refreshTargets();

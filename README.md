@@ -9,10 +9,10 @@
 Голосовое управление · Windows Automation · анализ экрана · локальный AI · Telegram Desktop
 
 <p>
-  <img src="https://img.shields.io/badge/VERSION-1.9.0-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Version 1.9.0" />
+  <img src="https://img.shields.io/badge/VERSION-1.9.1-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Version 1.9.1" />
   <img src="https://img.shields.io/badge/WINDOWS-10%20%2F%2011-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Windows 10 and 11" />
   <img src="https://img.shields.io/badge/AI-LOCAL--FIRST-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="Local-first AI" />
-  <img src="https://img.shields.io/badge/TESTS-535-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="535 tests" />
+  <img src="https://img.shields.io/badge/TESTS-537-7667F5?style=for-the-badge&labelColor=0B0C0F" alt="537 tests" />
 </p>
 
 [Возможности](#возможности) · [Как это работает](#как-это-работает) · [Установка](#быстрый-старт) · [Команды](COMMANDS.md) · [Документация](#документация)
@@ -193,6 +193,8 @@ codex login status
 </details>
 
 ## Проверки
+
+Версия 1.9.1 прошла **537 pytest-тестов** и дополнительные UI-проверки: запоздавшая остановка старой сессии, отмена включения во время ожидания ответа и остановка кулаком до первого раскрытия ладони.
 
 Версия 1.9.0 прошла **535 pytest-тестов**, тесты распознавания жестов, реальную обработку двух рук в Worker, Windows-перенос тестового окна между двумя мониторами и управление собственной медиасессией Edge (пауза/продолжить, ±5 секунд). Голосовое пробуждение также проверено. Подробности и ограничения — [docs/GESTURES.md](docs/GESTURES.md).
 

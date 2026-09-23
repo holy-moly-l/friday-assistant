@@ -198,7 +198,7 @@ async def local_only(request: Request, call_next):
 
 @app.get('/api/health')
 def health():
-    return {'app': 'friday', 'version': '1.9.0', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
+    return {'app': 'friday', 'version': '1.9.1', 'services': {k: state[k] for k in ('llm', 'stt', 'tts')}, 'model': desktop.model, 'ai':desktop.ai.settings(), 'stt_model': STT_LABEL, 'stt_device': stt_device, 'expressive_voice': expressive.status, 'wake_word': wake_service.status}
 
 
 @app.post('/api/retry')
@@ -583,8 +583,8 @@ async def gesture_action(body:GestureActionBody):
     except (CommandError,TimeoutError) as exc:raise HTTPException(409,str(exc) or 'Плеер не ответил вовремя.')
 
 @app.post('/api/gestures/stop')
-async def gesture_stop():
-    gestures.stop();return {'ok':True}
+async def gesture_stop(body:GestureTokenBody):
+    gestures.stop_session(body.token);return {'ok':True}
 
 wake_service.mount(app,TOKEN,PORT,transcribe_wake_pcm,lambda:state['stt']=='ready',stop_controls,lambda:bool(desktop.pending))
 
